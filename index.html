@@ -1,0 +1,3453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solstice — Easy Time Zone Converter</title>
+  <style>
+    /* ─── Reset ──────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    button { font: inherit; cursor: pointer; border: none; background: none; }
+
+    /* ─── Light theme (default) ──────────────────────────────────────── */
+    :root {
+      --bg:             #F3F0FF;
+      --card-bg:        #FFFFFF;
+      --border:         #E4E0F5;
+      --border-h:       #7C3AED;
+      --text:           #1E1433;
+      --text-muted:     #6E6789;
+      --accent:         #7C3AED;
+      --accent2:        #A78BFA;
+      --tag-bg:         #EDE9FE;
+      --live:           #059669;
+      --primary-fg:     #FFFFFF;
+      --overlay:        rgba(15,10,30,0.5);
+      --shadow:         0 1px 2px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.07);
+      --shadow-h:       0 2px 6px rgba(0,0,0,0.13), 0 6px 20px rgba(0,0,0,0.09);
+      --title-from:     #5B21B6;
+      --title-to:       #7C3AED;
+      --seg-active-shadow: 0 1px 6px rgba(124,58,237,0.25);
+      /* M3 surface hierarchy */
+      --surface:                   #FFFFFF;
+      --surface-dim:               #F3F0FF;
+      --surface-container-low:     #F5F2FF;
+      --surface-container:         #EDE9FE;
+      --surface-container-high:    #E4E0F5;
+      --surface-container-highest: #DDD8F5;
+      color-scheme: light;
+    }
+
+    /* ─── Dark theme ─────────────────────────────────────────────────── */
+    [data-theme="dark"] {
+      --bg:             #0D0A1A;
+      --card-bg:        #18122B;
+      --border:         #2E2248;
+      --border-h:       #A78BFA;
+      --text:           #EDE9FE;
+      --text-muted:     #9D8FBF;
+      --accent:         #A78BFA;
+      --accent2:        #C4B5FD;
+      --tag-bg:         #231B38;
+      --live:           #34D399;
+      --primary-fg:     #1A0F38;
+      --overlay:        rgba(0,0,0,0.7);
+      --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.4);
+      --shadow-h:       0 3px 8px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.5);
+      --title-from:     #C4B5FD;
+      --title-to:       #A78BFA;
+      --seg-active-shadow: 0 1px 6px rgba(0,0,0,0.5);
+      /* M3 surface hierarchy */
+      --surface:                   #18122B;
+      --surface-dim:               #0D0A1A;
+      --surface-container-low:     #1C1530;
+      --surface-container:         #231B38;
+      --surface-container-high:    #2E2248;
+      --surface-container-highest: #3A2D56;
+      color-scheme: dark;
+    }
+
+    /* ─── System dark (only when no explicit theme is set) ───────────── */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) {
+        --bg:             #0D0A1A;
+        --card-bg:        #18122B;
+        --border:         #2E2248;
+        --border-h:       #A78BFA;
+        --text:           #EDE9FE;
+        --text-muted:     #9D8FBF;
+        --accent:         #A78BFA;
+        --accent2:        #C4B5FD;
+        --tag-bg:         #231B38;
+        --live:           #34D399;
+        --primary-fg:     #1A0F38;
+        --overlay:        rgba(0,0,0,0.7);
+        --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.4);
+        --shadow-h:       0 3px 8px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.5);
+        --title-from:     #C4B5FD;
+        --title-to:       #A78BFA;
+        --seg-active-shadow: 0 1px 6px rgba(0,0,0,0.5);
+        /* M3 surface hierarchy */
+        --surface:                   #18122B;
+        --surface-dim:               #0D0A1A;
+        --surface-container-low:     #1C1530;
+        --surface-container:         #231B38;
+        --surface-container-high:    #2E2248;
+        --surface-container-highest: #3A2D56;
+        color-scheme: dark;
+      }
+    }
+
+    /* ─── Base ───────────────────────────────────────────────────────── */
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 2.5rem 1.25rem 4rem;
+      overflow-x: hidden;
+      transition: background-color 0.3s cubic-bezier(0.2,0,0,1), color 0.3s;
+    }
+
+    /* ─── Gear button ────────────────────────────────────────────────── */
+    .gear-btn {
+      position: fixed;
+      top: 1.1rem;
+      right: 1.1rem;
+      width: 40px;
+      height: 40px;
+      background: transparent;
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      color: var(--text-muted);
+      box-shadow: none;
+      transition:
+        background-color 0.2s cubic-bezier(0.2,0,0,1), color 0.15s,
+        transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .gear-btn:hover    { background: var(--surface-container); border: none; color: var(--accent); }
+    .gear-btn.open     { transform: rotate(62deg); background: var(--surface-container-high); border: none; color: var(--accent); }
+
+    /* ─── Settings overlay ───────────────────────────────────────────── */
+    .settings-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--overlay);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s cubic-bezier(0.2, 0, 0, 1);
+      z-index: 150;
+    }
+    .settings-overlay.open { opacity: 1; pointer-events: all; }
+
+    /* ─── Settings panel ─────────────────────────────────────────────── */
+    .settings-panel {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      width: min(360px, 100vw);
+      background: var(--surface-container);
+      border-left: none;
+      transform: translateX(100%);
+      transition:
+        transform 0.35s cubic-bezier(0.2, 0, 0, 1),
+        background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+      z-index: 175;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: -4px 0 24px rgba(0,0,0,0.18), -1px 0 0 rgba(0,0,0,0.06);
+    }
+    .settings-panel.open { transform: translateX(0); }
+
+    .settings-hd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 1.5rem 0.75rem;
+      border-bottom: none;
+      flex-shrink: 0;
+    }
+    .settings-hd h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .settings-close {
+      width: 36px; height: 36px;
+      background: transparent;
+      border: none;
+      border-radius: 50%;
+      color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center;
+      transition: background-color 0.15s, color 0.15s;
+    }
+    .settings-close:hover { background: var(--surface-container); border: none; color: var(--text); }
+
+    .settings-body {
+      padding: 0.75rem 1.2rem 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .settings-section { display: flex; flex-direction: column; gap: 0.6rem; }
+    .settings-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+
+    /* ─── Segmented controls ─────────────────────────────────────────── */
+    .segmented {
+      display: flex;
+      background: var(--surface-container);
+      border: 1.5px solid var(--border);
+      border-radius: 9999px;
+      padding: 4px;
+      gap: 0;
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+    .seg-btn {
+      flex: 1;
+      padding: 0.42rem 0.5rem;
+      border-radius: 9999px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: background-color 0.2s cubic-bezier(0.2,0,0,1), color 0.2s;
+    }
+    .seg-btn:not(.active):hover { background: var(--surface-container-high); color: var(--text); }
+    .seg-btn.active {
+      background: var(--surface-container-highest);
+      color: var(--accent);
+      font-weight: 600;
+      box-shadow: none;
+    }
+
+    /* ─── Palette swatch picker ──────────────────────────────────────── */
+    .palette-swatches {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+    .palette-swatch-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.28rem;
+      padding: 0.42rem 0.55rem;
+      border-radius: 12px;
+      border: 1.5px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 500;
+      cursor: pointer;
+      min-width: 52px;
+      transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+    }
+    .palette-swatch-btn:not(.active):hover {
+      border-color: var(--accent);
+      background: var(--surface-container-high);
+      color: var(--text);
+    }
+    .palette-swatch-btn.active {
+      border-color: var(--primary, var(--accent));
+      background: var(--accent-bg, var(--tag-bg));
+      color: var(--accent);
+      font-weight: 700;
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+    }
+    .palette-swatch-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ─── Header ─────────────────────────────────────────────────────── */
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+      position: relative;
+    }
+
+    /* ─── Decorative wave pattern ────────────────────────────────────── */
+    .waves-bg {
+      position: absolute;
+      top: -2.5rem;
+      left: 0;
+      width: 100%;
+      height: 460px;
+      pointer-events: none;
+      z-index: -1;
+      -webkit-mask-image: linear-gradient(to bottom, black 0%, rgba(0,0,0,0.55) 50%, transparent 80%);
+      mask-image: linear-gradient(to bottom, black 0%, rgba(0,0,0,0.55) 50%, transparent 80%);
+    }
+    .wave {
+      fill: none;
+      stroke: var(--accent);
+      stroke-linecap: round;
+    }
+    .wave-a { opacity: 0.14; stroke-width: 2;   }
+    .wave-b { opacity: 0.10; stroke-width: 1.5; stroke: var(--accent2); }
+    .wave-c { opacity: 0.09; stroke-width: 1.5; }
+    .wave-d { opacity: 0.07; stroke-width: 1;   stroke: var(--accent2); }
+    .wave-e { opacity: 0.05; stroke-width: 1;   }
+    .header-title {
+      font-size: clamp(1.75rem, 5vw, 2.75rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      background: linear-gradient(135deg, var(--title-from) 0%, var(--title-to) 60%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header-tagline {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+      margin-top: 0.15rem;
+    }
+    .header-sub {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      color: var(--text-muted);
+      margin-top: 0.6rem;
+      font-size: 0.875rem;
+    }
+    .live-dot {
+      width: 8px; height: 8px;
+      background: var(--live);
+      border-radius: 50%;
+      flex-shrink: 0;
+      animation: pulse 2.4s ease-in-out infinite;
+      transition: opacity 0.3s;
+    }
+    .live-dot.hidden { opacity: 0; animation: none; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1;   transform: scale(1);    }
+      50%       { opacity: 0.4; transform: scale(0.75); }
+    }
+
+    /* ─── Toolbar ────────────────────────────────────────────────────── */
+    .toolbar-wrap {
+      max-width: 1380px;
+      margin: 0 auto 1.75rem;
+    }
+    .toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    /* Row 1: mode toggle — centred, nothing else */
+    .toolbar-row-mode {
+      display: flex;
+      justify-content: center;
+    }
+    /* Row 2: grouped time-inputs box (left) + zone actions (right) */
+    .toolbar-row-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    /* Visual box around all time inputs — same look as the mode-toggle pill */
+    .time-controls-box {
+      display: none;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      background: var(--surface-container);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 5px 10px;
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+    .time-controls-box.visible { display: flex; }
+    /* Row 3: preset pills (left) + Copy Schedule (right) */
+    .toolbar-row-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .toolbar-row-btns {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .mode-toggle {
+      display: flex;
+      background: var(--surface-container);
+      border: 1.5px solid var(--border);
+      border-radius: 9999px;
+      padding: 4px;
+      gap: 0;
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+    .mode-btn {
+      padding: 0.42rem 1rem;
+      border-radius: 9999px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: background-color 0.2s cubic-bezier(0.2,0,0,1), color 0.2s;
+    }
+    .mode-btn:not(.active):hover { background: var(--surface-container-high); color: var(--text); }
+    .mode-btn.active {
+      background: var(--surface-container-highest);
+      color: var(--accent);
+      font-weight: 700;
+      box-shadow: none;
+    }
+
+    .custom-time-group {
+      display: none;
+      align-items: center;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+    .custom-time-group.visible { display: flex; }
+    .custom-input-part {
+      padding: 0.38rem 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface-container-low);
+      color: var(--text);
+      font-size: 0.8rem;
+      font-family: inherit;
+      accent-color: var(--accent);
+      transition: border-color 0.2s, background-color 0.3s, color 0.3s;
+    }
+    select.custom-input-part { cursor: pointer; }
+    .custom-input-part:focus { outline: none; border: 2px solid var(--accent); }
+    /* Date input: trim the trailing dead space after the date value */
+    #customDatePart { max-width: 8.5rem; min-width: 0; padding-right: 0.15rem; }
+    .time-colon { color: var(--text-muted); font-weight: 600; font-size: 0.9rem; user-select: none; }
+
+    .toolbar-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Context label shown before date/time inputs in Plan a Time and Schedule modes */
+    .time-input-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      white-space: nowrap;
+      user-select: none;
+    }
+    .clear-all-btn {
+      padding: 0.38rem 0.75rem;
+      border: 1px solid rgba(248,81,73,0.35);
+      border-radius: 9999px;
+      background: transparent;
+      color: #e5534b;
+      font-size: 0.8rem;
+      font-weight: 500;
+      white-space: nowrap;
+      min-height: 36px;
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+    .clear-all-btn:hover { background: rgba(248,81,73,0.08); border-color: rgba(248,81,73,0.6); }
+    .tz-select {
+      padding: 0.38rem 0.5rem 0.38rem 0.65rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface-container-low);
+      color: var(--text);
+      font-size: 0.8rem;
+      font-family: inherit;
+      cursor: pointer;
+      min-width: 175px;
+      transition: border-color 0.2s, background-color 0.3s, color 0.3s;
+    }
+    .tz-select:hover  { border-color: var(--text); }
+    .tz-select:focus  { outline: none; border: 2px solid var(--accent); }
+
+    /* ─── Grid ───────────────────────────────────────────────────────── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(270px, 100%), 1fr));
+      gap: 1.25rem;
+      max-width: 1380px;
+      margin: 0 auto;
+    }
+
+    /* ─── Card ───────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card-bg);
+      border: none;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+      cursor: move;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.07);
+      transition:
+        background-color 0.2s cubic-bezier(0.2,0,0,1), color 0.2s,
+        box-shadow 0.2s cubic-bezier(0.2,0,0,1), opacity 0.22s;
+    }
+    .card:hover {
+      border-color: transparent;
+      transform: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.13), 0 6px 20px rgba(0,0,0,0.09);
+    }
+    .card:active { cursor: move; }
+    /* Drag-and-drop: suppress cursor and selection on the whole page while dragging */
+    body.is-dragging-card,
+    body.is-dragging-card * { user-select: none; cursor: grabbing !important; }
+    /* Drop-target indicators */
+    .card.drag-over-before { outline: 3px solid var(--accent); outline-offset: 2px; box-shadow: var(--shadow); }
+    .card.drag-over-after  { outline: 3px solid var(--accent); outline-offset: 2px; box-shadow: var(--shadow); }
+    /* Placeholder: the slot where the dragged card originally sat */
+    .card.drag-placeholder {
+      background: var(--bg) !important;
+      border: 2px dashed var(--border);
+      box-shadow: none !important;
+      pointer-events: none;
+      transition: none;
+    }
+    .card.drag-placeholder::before { opacity: 0 !important; }
+    .card.drag-placeholder > * { visibility: hidden; }
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 12px 12px 0 0;
+      opacity: 0.2;
+      transition: opacity 0.22s cubic-bezier(0.2,0,0,1);
+    }
+    .card:hover::before { opacity: 1; }
+    /* Period cards: accent bar always fully visible, period-matched gradient */
+    .card[data-period="day"]::before     { opacity: 0.85; background: linear-gradient(90deg, #F59E0B, #FCD34D); }
+    .card[data-period="twilight"]::before{ opacity: 0.85; background: linear-gradient(90deg, #EA580C, #FB923C); }
+    .card[data-period="night"]::before   { opacity: 0.85; background: linear-gradient(90deg, #7C3AED, #C4B5FD); }
+    .card[data-period="day"]:hover::before,
+    .card[data-period="twilight"]:hover::before,
+    .card[data-period="night"]:hover::before { opacity: 1; }
+
+    /* Remove button */
+    .card-remove {
+      position: absolute;
+      top: 0.75rem; right: 0.75rem;
+      width: 26px; height: 26px;
+      background: transparent;
+      border: none;
+      border-radius: 50%;
+      color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0;
+      transform: scale(0.7);
+      transition: opacity 0.15s, transform 0.15s, background-color 0.12s, color 0.12s;
+    }
+    .card:hover .card-remove { opacity: 1; transform: scale(1); }
+    .card-remove:hover { background: rgba(248,81,73,0.12); border: none; color: #f85149; }
+
+    /* Card contents */
+    .card-label {
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: var(--accent);
+      margin-bottom: 0.2rem;
+    }
+    .card-tz {
+      font-family: 'SF Mono', ui-monospace, 'Fira Code', monospace;
+      font-size: 0.63rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+    .card-time-wrap { margin-bottom: 0.45rem; }
+    .card-time {
+      display: flex;
+      align-items: baseline;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .time-hm {
+      font-size: clamp(1.6rem, 3.5vw, 2.5rem);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      color: var(--text);
+    }
+    /* Task 2: seconds hidden globally */
+    .time-sec {
+      font-size: clamp(0.95rem, 2vw, 1.5rem);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      color: var(--text-muted);
+      margin-left: 1px;
+      display: none;
+    }
+    .time-ampm {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      margin-left: 0.4rem;
+      align-self: flex-end;
+      padding-bottom: 0.1em;
+    }
+    .card-date {
+      font-size: 0.825rem;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+
+    /* ─── Working hours status label ─────────────────────────────────── */
+    .card-work-status {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.45rem;
+      min-height: 1em;
+    }
+    .card-work-status[data-type="ok"]      { color: var(--live);   }
+    .card-work-status[data-type="early"]   { color: var(--text-muted); }
+    .card-work-status[data-type="evening"] { color: #d08040; }
+    .card-work-status[data-type="night"]   { color: #b05050; }
+    [data-theme="dark"] .card-work-status[data-type="evening"] { color: #e0a060; }
+    [data-theme="dark"] .card-work-status[data-type="night"]   { color: #d07070; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) .card-work-status[data-type="evening"] { color: #e0a060; }
+      :root:not([data-theme]) .card-work-status[data-type="night"]   { color: #d07070; }
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    body.hide-offset .card-offset { display: none; }
+    .card-offset {
+      display: inline-block;
+      font-family: 'SF Mono', ui-monospace, 'Fira Code', monospace;
+      font-size: 0.68rem;
+      background: var(--surface-container, var(--tag-bg));
+      border: none;
+      border-radius: 8px;
+      padding: 0.2rem 0.55rem;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+      transition: background-color 0.3s;
+    }
+    /* Per-tile copy button */
+    .card-copy {
+      width: 24px; height: 24px;
+      background: transparent;
+      border: none;
+      border-radius: 50%;
+      color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-left: auto;
+      opacity: 0;
+      transform: scale(0.7);
+      transition: opacity 0.15s, transform 0.15s, background-color 0.12s, color 0.12s;
+    }
+    .card:hover .card-copy { opacity: 1; transform: scale(1); }
+    .card-copy:hover { background: var(--surface-container); border: none; color: var(--accent); }
+    .card-copy.copied {
+      color: var(--live);
+      opacity: 1; transform: scale(1);
+    }
+
+    /* ─── Footer ─────────────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      opacity: 0.45;
+      transition: color 0.3s;
+    }
+
+    /* ─── Responsive ─────────────────────────────────────────────────── */
+
+    /* Mobile — single column, full-width toolbar controls */
+    @media (max-width: 620px) {
+      body           { padding: 1.25rem 1rem 3rem; padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
+      header         { padding-top: 3rem; margin-bottom: 1.5rem; }
+      .card          { padding: 0.85rem 1rem; }
+
+      /* Toolbar: stack every control onto its own full-width row */
+      .mode-toggle    { width: 100%; }
+      .mode-btn       { flex: 1; }
+      .toolbar-row-controls { flex-wrap: wrap; }
+      .time-controls-box { width: 100%; }
+      .toolbar-actions { margin-left: 0; width: 100%; flex-wrap: wrap; }
+      .copy-btn       { width: 100%; justify-content: center; }
+      .custom-time-group { width: 100%; }
+      .time-input-label  { width: 100%; }   /* own row; pickers form a single line below */
+      .meeting-duration-group { width: 100%; }
+      .toolbar-row-actions { flex-wrap: wrap; }
+      .time-presets   { width: 100%; }
+      .toolbar-row-btns { margin-left: 0; width: 100%; }
+      .toolbar-row-btns .copy-btn { flex: 1; justify-content: center; }
+      .tz-select      { width: 100%; min-width: 0; flex: 1; }
+    }
+
+    /* Touch devices: no hover available, so always show card action buttons */
+    @media (hover: none) {
+      .card-remove,
+      .card-copy { opacity: 1; transform: scale(1); }
+    }
+
+    /* ─── Meeting duration group ─────────────────────────────────────────── */
+    .meeting-duration-group {
+      display: none;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .meeting-duration-group.visible { display: flex; }
+
+    /* ─── Quick time presets ──────────────────────────────────────────────── */
+    .time-presets {
+      display: none;
+      align-items: center;
+      gap: 2px;
+      flex-wrap: wrap;
+      background: var(--surface-container);
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 3px;
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+    .time-presets.visible { display: flex; }
+    .preset-btn {
+      padding: 0.38rem 0.75rem;
+      border: none;
+      border-radius: 9999px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: background-color 0.15s, color 0.15s;
+    }
+    .preset-btn:hover {
+      background: var(--surface-container-high);
+      color: var(--accent);
+    }
+    .presets-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      padding: 0.2rem 0.6rem 0.2rem 0.3rem;
+      border-right: 1px solid var(--border);
+      margin-right: 1px;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    /* ─── Meeting mode card display ──────────────────────────────────────── */
+
+    /* End-time element — hidden by default */
+    .card-meeting-end { display: none; }
+
+    /* In meeting mode: lay start → end side-by-side in the wrapper */
+    body.meeting-mode .card-time-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* Scale start time down so it matches the end time */
+    body.meeting-mode .time-hm {
+      font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+      letter-spacing: -0.02em;
+    }
+    body.meeting-mode .time-ampm { font-size: 0.72rem; }
+
+    /* Show end-time alongside start time, at matching size */
+    body.meeting-mode .card-meeting-end {
+      display: flex;
+      align-items: center;
+      font-size: clamp(1.0rem, 2.3vw, 1.4rem);
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .card-meeting-end .meet-end-time {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* +1 day badge when the meeting end crosses midnight in that timezone */
+    .card-meeting-end .meet-next-day {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      background: var(--accent);
+      color: var(--primary-fg);
+      border-radius: 4px; /* already correct — extra-small */
+      padding: 0.05rem 0.3rem;
+      margin-left: 0.3rem;
+      vertical-align: middle;
+      line-height: 1.5;
+    }
+
+    /* ─── Schedule conflict highlight ────────────────────────────────────── */
+    .card.schedule-conflict {
+      outline: 2px solid rgba(208,100,40,0.6);
+      outline-offset: -1px;
+    }
+    .card.schedule-conflict::before {
+      background: linear-gradient(90deg, #d06428, #e08040);
+      opacity: 1;
+    }
+
+    /* ─── Copy Schedule button ───────────────────────────────────────────── */
+    .copy-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.38rem 0.75rem;
+      border: none;
+      border-radius: 9999px;
+      background: var(--surface-container-high);
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 500;
+      white-space: nowrap;
+      min-height: 36px;
+      transition: background-color 0.2s cubic-bezier(0.2,0,0,1), color 0.2s;
+    }
+    .copy-btn:hover {
+      background: var(--surface-container-highest);
+      color: var(--accent);
+      border: none;
+    }
+    .copy-btn:disabled { opacity: 0.65; cursor: default; pointer-events: none; }
+
+    /* ─── Day/Night card theming (light mode) ────────────────────────────── */
+    .card[data-period="day"] {
+      background: #FFF8E1;
+      /* Warm amber tonal container — M3 tertiary container for violet seed */
+      --accent:  #B45309;
+      --accent2: #D97706;
+    }
+    .card[data-period="twilight"] {
+      background: #FFF3E0;
+      /* Deep-orange tonal container */
+      --accent:  #C2410C;
+      --accent2: #EA580C;
+    }
+    .card[data-period="night"] {
+      background: #1E1938;
+      /* Deep violet — matches the app's dark theme surface, not generic navy */
+      --text:              #EDE9FE;
+      --text-muted:        #A99EC8;
+      --accent:            #C4B5FD;
+      --accent2:           #DDD6FE;
+      --tag-bg:            #2D264E;
+      --surface-container: #2D264E;
+      --border:            rgba(124,58,237,0.25);
+      --border-h:          #C4B5FD;
+    }
+
+    /* ─── Dark mode card elevation shadows ───────────────────────────────── */
+    [data-theme="dark"] .card {
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.4);
+    }
+    [data-theme="dark"] .card:hover {
+      box-shadow: 0 3px 8px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.5);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) .card { box-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.4); }
+      :root:not([data-theme]) .card:hover { box-shadow: 0 3px 8px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.5); }
+    }
+
+    /* ─── Day/Night card theming (dark theme override) ───────────────────── */
+    [data-theme="dark"] .card[data-period="day"] {
+      background: #2E2508;
+      --accent: #FCD34D;
+      --accent2: #FDE68A;
+    }
+    [data-theme="dark"] .card[data-period="twilight"] {
+      background: #271500;
+      --accent: #FB923C;
+      --accent2: #FDBA74;
+    }
+    [data-theme="dark"] .card[data-period="night"] {
+      background: #100D20;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) .card[data-period="day"]      { background: #2E2508; --accent: #FCD34D; --accent2: #FDE68A; }
+      :root:not([data-theme]) .card[data-period="twilight"] { background: #271500; --accent: #FB923C; --accent2: #FDBA74; }
+      :root:not([data-theme]) .card[data-period="night"]    { background: #100D20; }
+    }
+
+    /* ─── Period icon & label row ────────────────────────────────────────── */
+    .card-label-row {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-bottom: 0.2rem;
+    }
+    .card-label-row .card-label { margin-bottom: 0; }
+    .period-icon { font-size: 1rem; line-height: 1; flex-shrink: 0; }
+
+    /* ─── Copy fallback modal ─────────────────────────────────────────────── */
+    .copy-modal {
+      position: fixed;
+      inset: 0;
+      background: var(--overlay);
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .copy-modal-inner {
+      background: var(--surface-container-high);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      max-width: 480px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .copy-modal-inner p        { font-size: 0.875rem; color: var(--text-muted); }
+    .copy-modal-inner textarea {
+      width: 100%; min-height: 140px;
+      font-family: 'SF Mono', ui-monospace, 'Fira Code', monospace;
+      font-size: 0.8rem; padding: 0.6rem;
+      border: 1px solid var(--border); border-radius: 6px;
+      background: var(--tag-bg); color: var(--text); resize: vertical;
+    }
+    .copy-modal-inner .modal-close {
+      align-self: flex-end;
+      padding: 0.4rem 1rem;
+      border: 1px solid var(--border); border-radius: 7px;
+      background: var(--tag-bg); color: var(--text);
+      font-size: 0.8rem; cursor: pointer;
+    }
+
+    /* ─── Mobile sticky copy bar ──────────────────────────────────────────── */
+    .mobile-copy-bar { display: none; }
+
+    @media (max-width: 620px) {
+      .mobile-copy-bar {
+        display: flex;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        padding: 0.65rem 1rem;
+        padding-bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px));
+        background: var(--card-bg);
+        border-top: 1px solid var(--border);
+        z-index: 120;
+        box-shadow: 0 -4px 16px rgba(0,0,0,0.1);
+        transition: background-color 0.3s, border-color 0.3s;
+      }
+      .mobile-copy-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        padding: 0.6rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--accent);
+        color: var(--primary-fg);
+        font-size: 0.875rem;
+        font-weight: 600;
+        transition: opacity 0.15s;
+      }
+      .mobile-copy-btn:active { opacity: 0.8; }
+    }
+
+    /* ── Download Invite button ───────────────────────────────────────────── */
+    .download-invite-btn {
+      border: none;
+      color: var(--accent);
+      background: var(--surface-container-high);
+    }
+    .download-invite-btn:hover {
+      border: none;
+      background: var(--surface-container-highest);
+      color: var(--accent);
+    }
+
+    /* ── Find Overlap modal ───────────────────────────────────────────────── */
+    body.overlap-modal-open { overflow: hidden; }
+
+    .overlap-modal {
+      position: fixed;
+      inset: 0;
+      background: var(--overlay);
+      z-index: 300;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+      overflow-y: auto;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.22s cubic-bezier(0.2, 0, 0, 1), visibility 0.22s;
+    }
+    .overlap-modal.open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .overlap-modal-inner {
+      background: var(--surface-container-high);
+      border: none;
+      border-radius: 28px;
+      width: 100%;
+      max-width: 860px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1);
+      opacity: 0;
+      transform: scale(0.97) translateY(10px);
+      transition:
+        opacity 0.25s cubic-bezier(0.2, 0, 0, 1),
+        transform 0.3s cubic-bezier(0.05, 0.7, 0.1, 1),
+        background-color 0.3s, border-color 0.3s;
+      margin: 0 auto;
+    }
+    .overlap-modal.open .overlap-modal-inner {
+      opacity: 1;
+      transform: none;
+    }
+    .overlap-modal-hd {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 1.5rem 1.5rem 1rem;
+      border-bottom: none;
+      flex-shrink: 0;
+      gap: 1rem;
+    }
+    .overlap-modal-titles { flex: 1; }
+    .overlap-modal-hd h2 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+    }
+    .overlap-subtitle { font-size: 0.78rem; color: var(--text-muted); }
+    .overlap-date-line {
+      font-size: 0.75rem;
+      color: var(--accent);
+      font-weight: 500;
+      margin-top: 0.15rem;
+    }
+    .overlap-date-line:empty { display: none; }
+    .overlap-close {
+      width: 32px; height: 32px;
+      background: transparent;
+      border: none;
+      border-radius: 50%;
+      color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background-color 0.15s, color 0.15s;
+    }
+    .overlap-close:hover { background: var(--surface-container); border: none; color: var(--text); }
+
+    .overlap-modal-body {
+      padding: 1rem 1.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.4rem;
+    }
+    .overlap-section-hd {
+      font-size: 0.67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 0.55rem;
+    }
+    /* Tier label above suggestion pills */
+    .overlap-tier-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.65rem;
+      border-radius: 8px;
+      margin-bottom: 0.55rem;
+      display: inline-block;
+    }
+    .overlap-tier-1 { background: rgba(26,127,55,0.12); color: var(--live); }
+    .overlap-tier-2 { background: rgba(208,128,64,0.15); color: #c07020; }
+    .overlap-tier-3 { color: var(--text-muted); padding-left: 0; background: transparent; }
+    [data-theme="dark"] .overlap-tier-2 { color: #e09050; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme]) .overlap-tier-2 { color: #e09050; } }
+    /* Suggestion pills */
+    .overlap-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .overlap-pill {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.38rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      background: var(--tag-bg);
+      color: var(--text);
+      cursor: pointer;
+      transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .overlap-pill:hover { background: var(--accent); border-color: var(--accent); color: var(--primary-fg); }
+    .overlap-pill-main { font-size: 0.8rem; font-weight: 500; }
+    .overlap-pill-sub {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      max-width: 18rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .overlap-pill:hover .overlap-pill-sub { color: rgba(255,255,255,0.75); }
+    .overlap-no-slots { font-size: 0.85rem; color: var(--text-muted); font-style: italic; }
+
+    /* 24-hour availability grid */
+    .overlap-table-wrap {
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: min(420px, 52vh);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .overlap-table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.78rem;
+    }
+    .overlap-table thead th {
+      background: var(--surface-container-highest);
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.67rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      padding: 0.45rem 0.8rem;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+    .overlap-table thead th:first-child { position: sticky; left: 0; z-index: 3; }
+    .overlap-th-local {
+      display: block;
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: none;
+      letter-spacing: 0.02em;
+      margin-top: 0.15rem;
+      opacity: 0.85;
+    }
+
+    .overlap-table td {
+      padding: 0.28rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      white-space: nowrap;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    /* Sticky time label column */
+    .overlap-table td:first-child {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--surface-container-high);
+      border-right: 2px solid var(--border);
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+
+    /* Cell status colours — light mode */
+    .overlap-table td[data-status="early"]   { color: var(--text-muted); }
+    .overlap-table td[data-status="ok"]      { background: rgba(26,127,55,0.10); }
+    .overlap-table td[data-status="evening"] { background: rgba(208,128,64,0.18); }
+    .overlap-table td[data-status="night"]   { background: rgba(17,24,39,0.82); color: #7090d0; }
+
+    /* Overlap highlight: rows covered by a valid slot window */
+    .overlap-table tr.is-overlap td:first-child {
+      font-weight: 700;
+    }
+    .overlap-table td[data-overlap="true"] { background: rgba(26,127,55,0.26) !important; }
+    .overlap-table tr.is-overlap td:nth-child(2) { border-left: 3px solid var(--live); }
+
+    /* Dark-mode overrides */
+    [data-theme="dark"] .overlap-table td[data-status="ok"]      { background: rgba(63,185,80,0.11); }
+    [data-theme="dark"] .overlap-table td[data-status="evening"] { background: rgba(224,160,96,0.16); }
+    [data-theme="dark"] .overlap-table td[data-status="night"]   { background: rgba(9,13,31,0.92); color: #7090d0; }
+    [data-theme="dark"] .overlap-table tr.is-overlap td:first-child { font-weight: 700; }
+    [data-theme="dark"] .overlap-table td[data-overlap="true"]   { background: rgba(63,185,80,0.25) !important; }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) .overlap-table td[data-status="ok"]      { background: rgba(63,185,80,0.11); }
+      :root:not([data-theme]) .overlap-table td[data-status="evening"] { background: rgba(224,160,96,0.16); }
+      :root:not([data-theme]) .overlap-table td[data-status="night"]   { background: rgba(9,13,31,0.92); color: #7090d0; }
+      :root:not([data-theme]) .overlap-table tr.is-overlap td:first-child { font-weight: 700; }
+      :root:not([data-theme]) .overlap-table td[data-overlap="true"]   { background: rgba(63,185,80,0.25) !important; }
+    }
+
+    /* ══════════════════════════════════════════════════════════════════
+       COLOR PALETTES — each defines --primary, --primary-hover,
+       --primary-fg, --accent-bg, --accent-border, --live.
+       Light variants on :root; dark variants on [data-theme="dark"]
+       and system-dark media query.
+       'default' palette uses the existing :root values — no new CSS.
+       ══════════════════════════════════════════════════════════════════ */
+
+    /* ── Ocean ── */
+    [data-color-palette="ocean"] {
+      --primary:       #0EA5E9;
+      --primary-hover: #0284C7;
+      --primary-fg:    #FFFFFF;
+      --accent-bg:     #E0F2FE;
+      --accent-border: #BAE6FD;
+      --live:          #0077A8;
+      --accent:        #0EA5E9;
+      --accent2:       #38BDF8;
+      --border-h:      #0EA5E9;
+    }
+    [data-theme="dark"][data-color-palette="ocean"] {
+      --primary:       #38BDF8;
+      --primary-hover: #7DD3FC;
+      --primary-fg:    #0C1A2E;
+      --accent-bg:     #0C2744;
+      --accent-border: #1E3A5F;
+      --live:          #38BDF8;
+      --accent:        #38BDF8;
+      --accent2:       #7DD3FC;
+      --border-h:      #38BDF8;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme])[data-color-palette="ocean"] {
+        --primary:       #38BDF8;
+        --primary-hover: #7DD3FC;
+        --primary-fg:    #0C1A2E;
+        --accent-bg:     #0C2744;
+        --accent-border: #1E3A5F;
+        --live:          #38BDF8;
+        --accent:        #38BDF8;
+        --accent2:       #7DD3FC;
+        --border-h:      #38BDF8;
+      }
+    }
+
+    /* ── Ember ── */
+    [data-color-palette="ember"] {
+      --primary:       #EA580C;
+      --primary-hover: #C2410C;
+      --primary-fg:    #FFFFFF;
+      --accent-bg:     #FFF7ED;
+      --accent-border: #FED7AA;
+      --live:          #C2410C;
+      --accent:        #EA580C;
+      --accent2:       #F97316;
+      --border-h:      #EA580C;
+    }
+    [data-theme="dark"][data-color-palette="ember"] {
+      --primary:       #FB923C;
+      --primary-hover: #FDBA74;
+      --primary-fg:    #1C0A00;
+      --accent-bg:     #2C1200;
+      --accent-border: #7C2D12;
+      --live:          #FB923C;
+      --accent:        #FB923C;
+      --accent2:       #FDBA74;
+      --border-h:      #FB923C;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme])[data-color-palette="ember"] {
+        --primary:       #FB923C;
+        --primary-hover: #FDBA74;
+        --primary-fg:    #1C0A00;
+        --accent-bg:     #2C1200;
+        --accent-border: #7C2D12;
+        --live:          #FB923C;
+        --accent:        #FB923C;
+        --accent2:       #FDBA74;
+        --border-h:      #FB923C;
+      }
+    }
+
+    /* ── Forest ── */
+    [data-color-palette="forest"] {
+      --primary:       #16A34A;
+      --primary-hover: #15803D;
+      --primary-fg:    #FFFFFF;
+      --accent-bg:     #F0FDF4;
+      --accent-border: #BBF7D0;
+      --live:          #15803D;
+      --accent:        #16A34A;
+      --accent2:       #22C55E;
+      --border-h:      #16A34A;
+    }
+    [data-theme="dark"][data-color-palette="forest"] {
+      --primary:       #4ADE80;
+      --primary-hover: #86EFAC;
+      --primary-fg:    #052E16;
+      --accent-bg:     #052E16;
+      --accent-border: #14532D;
+      --live:          #4ADE80;
+      --accent:        #4ADE80;
+      --accent2:       #86EFAC;
+      --border-h:      #4ADE80;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme])[data-color-palette="forest"] {
+        --primary:       #4ADE80;
+        --primary-hover: #86EFAC;
+        --primary-fg:    #052E16;
+        --accent-bg:     #052E16;
+        --accent-border: #14532D;
+        --live:          #4ADE80;
+        --accent:        #4ADE80;
+        --accent2:       #86EFAC;
+        --border-h:      #4ADE80;
+      }
+    }
+
+    /* ── Rose ── */
+    [data-color-palette="rose"] {
+      --primary:       #E11D48;
+      --primary-hover: #BE123C;
+      --primary-fg:    #FFFFFF;
+      --accent-bg:     #FFF1F2;
+      --accent-border: #FECDD3;
+      --live:          #BE123C;
+      --accent:        #E11D48;
+      --accent2:       #F43F5E;
+      --border-h:      #E11D48;
+    }
+    [data-theme="dark"][data-color-palette="rose"] {
+      --primary:       #FB7185;
+      --primary-hover: #FDA4AF;
+      --primary-fg:    #4C0519;
+      --accent-bg:     #4C0519;
+      --accent-border: #9F1239;
+      --live:          #FB7185;
+      --accent:        #FB7185;
+      --accent2:       #FDA4AF;
+      --border-h:      #FB7185;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme])[data-color-palette="rose"] {
+        --primary:       #FB7185;
+        --primary-hover: #FDA4AF;
+        --primary-fg:    #4C0519;
+        --accent-bg:     #4C0519;
+        --accent-border: #9F1239;
+        --live:          #FB7185;
+        --accent:        #FB7185;
+        --accent2:       #FDA4AF;
+        --border-h:      #FB7185;
+      }
+    }
+
+    /* Prevent background scroll while ICS modal is open */
+    body.ics-modal-open { overflow: hidden; }
+
+    /* ── ICS modal ────────────────────────────────────────────────────────── */
+    .ics-modal {
+      position: fixed;
+      inset: 0;
+      background: var(--overlay);
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.22s cubic-bezier(0.2, 0, 0, 1), visibility 0.22s;
+    }
+    .ics-modal.open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .ics-modal-inner {
+      background: var(--surface-container-high);
+      border: none;
+      border-radius: 28px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1);
+      opacity: 0;
+      transform: scale(0.97) translateY(10px);
+      transition:
+        opacity 0.25s cubic-bezier(0.2, 0, 0, 1),
+        transform 0.3s cubic-bezier(0.05, 0.7, 0.1, 1),
+        background-color 0.3s, border-color 0.3s;
+    }
+    .ics-modal.open .ics-modal-inner {
+      opacity: 1;
+      transform: none;
+    }
+    .ics-modal-hd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 1.5rem 0.75rem;
+      border-bottom: none;
+      flex-shrink: 0;
+      gap: 0.75rem;
+    }
+    .ics-modal-context {
+      font-size: 0.83rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      flex: 1;
+      line-height: 1.4;
+    }
+    .ics-close-btn {
+      width: 32px; height: 32px;
+      background: transparent;
+      border: none;
+      border-radius: 50%;
+      color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background-color 0.15s, color 0.15s;
+    }
+    .ics-close-btn:hover { background: var(--surface-container); border: none; color: var(--text); }
+
+    .ics-modal-body {
+      padding: 0.75rem 1.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .ics-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .ics-field-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--text-muted);
+    }
+    .ics-title-input {
+      padding: 0.5rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface-container-low);
+      color: var(--text);
+      font-size: 0.875rem;
+      font-family: inherit;
+      transition: border-color 0.2s, background-color 0.3s, color 0.3s;
+    }
+    .ics-title-input:focus {
+      outline: none;
+      border: 2px solid var(--accent);
+    }
+    .ics-desc-textarea {
+      padding: 0.5rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface-container-low);
+      color: var(--text);
+      font-family: 'SF Mono', ui-monospace, 'Fira Code', monospace;
+      font-size: 0.76rem;
+      line-height: 1.55;
+      resize: vertical;
+      min-height: 8.5rem;
+      transition: border-color 0.2s, background-color 0.3s, color 0.3s;
+    }
+    .ics-desc-textarea:focus {
+      outline: none;
+      border: 2px solid var(--accent);
+    }
+    .ics-download-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      padding: 0.55rem 1.1rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: var(--primary-fg);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 36px;
+      transition: opacity 0.15s;
+    }
+    .ics-download-btn:hover:not(:disabled) { opacity: 0.88; }
+    .ics-download-btn:disabled { opacity: 0.38; cursor: default; }
+  </style>
+</head>
+<body>
+
+<!-- ── Gear button ─────────────────────────────────────────────────────── -->
+<button class="gear-btn" id="gearBtn" aria-label="Open settings" aria-expanded="false" aria-controls="settingsPanel">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  </svg>
+</button>
+
+<!-- ── Settings overlay ────────────────────────────────────────────────── -->
+<div class="settings-overlay" id="settingsOverlay" aria-hidden="true"></div>
+
+<!-- ── Settings panel ─────────────────────────────────────────────────── -->
+<aside class="settings-panel" id="settingsPanel" role="dialog" aria-modal="true" aria-label="Settings">
+  <div class="settings-hd">
+    <h2>Settings</h2>
+    <button class="settings-close" id="settingsClose" aria-label="Close settings">
+      <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+        <line x1="1" y1="1" x2="10" y2="10"/><line x1="10" y1="1" x2="1" y2="10"/>
+      </svg>
+    </button>
+  </div>
+  <div class="settings-body">
+
+    <div class="settings-section">
+      <p class="settings-label">Time Format</p>
+      <div class="segmented" role="group" aria-label="Time format">
+        <button class="seg-btn" data-fmt="24">24-hour</button>
+        <button class="seg-btn" data-fmt="12">12-hour</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <p class="settings-label">Theme</p>
+      <div class="segmented" role="group" aria-label="Theme">
+        <button class="seg-btn" data-theme-btn="light">Light</button>
+        <button class="seg-btn" data-theme-btn="dark">Dark</button>
+        <button class="seg-btn" data-theme-btn="system">System</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <p class="settings-label">Color Palette</p>
+      <div class="palette-swatches" role="group" aria-label="Color palette">
+        <button class="palette-swatch-btn" data-palette="default" aria-label="Default palette">
+          <span class="palette-swatch-dot" style="background:#7C3AED"></span>
+          Default
+        </button>
+        <button class="palette-swatch-btn" data-palette="ocean" aria-label="Ocean palette">
+          <span class="palette-swatch-dot" style="background:#0EA5E9"></span>
+          Ocean
+        </button>
+        <button class="palette-swatch-btn" data-palette="ember" aria-label="Ember palette">
+          <span class="palette-swatch-dot" style="background:#EA580C"></span>
+          Ember
+        </button>
+        <button class="palette-swatch-btn" data-palette="forest" aria-label="Forest palette">
+          <span class="palette-swatch-dot" style="background:#16A34A"></span>
+          Forest
+        </button>
+        <button class="palette-swatch-btn" data-palette="rose" aria-label="Rose palette">
+          <span class="palette-swatch-dot" style="background:#E11D48"></span>
+          Rose
+        </button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <p class="settings-label">Default Mode</p>
+      <div class="segmented" role="group" aria-label="Default mode">
+        <button class="seg-btn" data-default-mode="live">Now</button>
+        <button class="seg-btn" data-default-mode="custom">Plan a time</button>
+        <button class="seg-btn" data-default-mode="meeting">Schedule</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <p class="settings-label">UTC Offset</p>
+      <div class="segmented" role="group" aria-label="UTC offset display">
+        <button class="seg-btn" data-offset="true">Show</button>
+        <button class="seg-btn" data-offset="false">Hide</button>
+      </div>
+    </div>
+
+  </div>
+</aside>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header>
+  <svg class="waves-bg" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 460" preserveAspectRatio="none">
+    <path class="wave wave-a" d="M0,58 C180,22 360,94 540,58 C720,22 900,94 1080,58 C1260,22 1380,72 1440,52"/>
+    <path class="wave wave-b" d="M0,108 C220,76 440,140 660,108 C880,76 1100,140 1320,108 C1380,98 1420,116 1440,104"/>
+    <path class="wave wave-c" d="M0,162 C300,130 600,194 900,162 C1080,144 1260,180 1440,162"/>
+    <path class="wave wave-d" d="M0,214 C200,196 400,232 600,214 C800,196 1000,232 1200,214 C1340,200 1400,224 1440,214"/>
+    <path class="wave wave-e" d="M0,266 C360,248 720,284 1080,266 C1260,258 1380,274 1440,266"/>
+  </svg>
+  <h1 class="header-title">Solstice</h1>
+  <p class="header-tagline">Easy time zone converter</p>
+  <p class="header-sub">
+    <span class="live-dot" id="liveDot" aria-hidden="true"></span>
+    <span id="headerSubText">Now &mdash; showing live time across all zones</span>
+  </p>
+</header>
+
+<!-- ── Toolbar ─────────────────────────────────────────────────────────── -->
+<div class="toolbar-wrap">
+  <div class="toolbar">
+    <!-- Row 1: mode switcher — centred, nothing else -->
+    <div class="toolbar-row-mode">
+      <div class="mode-toggle" role="group" aria-label="Time display mode">
+        <button class="mode-btn active" data-mode="live">Now</button>
+        <button class="mode-btn"        data-mode="custom">Plan a time</button>
+        <button class="mode-btn"        data-mode="meeting">Schedule</button>
+      </div>
+    </div>
+    <!-- Row 2: grouped time-inputs box (left) + Clear All / Add zone (right) -->
+    <div class="toolbar-row-controls">
+      <div id="timeControlsBox" class="time-controls-box">
+        <div id="customTimeGroup" class="custom-time-group">
+          <span id="timeInputLabel" class="time-input-label"></span>
+          <input type="date" id="customDatePart" class="custom-input-part" aria-label="Date">
+          <select id="customHourPart" class="custom-input-part" aria-label="Hour"></select>
+          <span class="time-colon" aria-hidden="true">:</span>
+          <select id="customMinutePart" class="custom-input-part" aria-label="Minute">
+            <option value="0">00</option>
+            <option value="15">15</option>
+            <option value="30">30</option>
+            <option value="45">45</option>
+          </select>
+          <select id="customAmPmPart" class="custom-input-part" aria-label="AM or PM" style="display:none;">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
+        </div>
+        <div id="meetingDurationGroup" class="meeting-duration-group">
+          <span class="time-colon" aria-hidden="true" style="font-size:0.8rem;white-space:nowrap;padding-left:0.5rem;border-left:1px solid var(--border);">Duration:</span>
+          <select id="meetingDurationSelect" class="custom-input-part" aria-label="Meeting duration">
+            <option value="15">15 min</option>
+            <option value="30">30 min</option>
+            <option value="45">45 min</option>
+            <option value="60" selected>1 hr</option>
+            <option value="75">1 hr 15 min</option>
+            <option value="90">1 hr 30 min</option>
+            <option value="105">1 hr 45 min</option>
+            <option value="120">2 hr</option>
+          </select>
+        </div>
+      </div>
+      <div class="toolbar-actions">
+        <button id="clearAllBtn" class="clear-all-btn" style="display:none;" aria-label="Clear all time zones">Clear All</button>
+        <select id="tzSelect" class="tz-select" aria-label="Add a time zone">
+          <option value="">+ Add time zone</option>
+        </select>
+      </div>
+    </div>
+    <!-- Row 3: preset pills (left, plan/schedule only) + Copy Schedule (right) -->
+    <div class="toolbar-row-actions">
+      <div id="timePresets" class="time-presets">
+        <span class="presets-label">Templates</span>
+        <button class="preset-btn" data-preset="now">Now</button>
+        <button class="preset-btn" data-preset="next-hour">Next hour</button>
+        <button class="preset-btn" data-preset="in-30">In 30 min</button>
+        <button class="preset-btn" data-preset="tomorrow-9am">Tomorrow 9am</button>
+      </div>
+      <div class="toolbar-row-btns">
+        <button id="findOverlapBtn" class="copy-btn" style="display:none;" aria-label="Find meeting overlap times">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Find Overlap
+        </button>
+        <button id="copyScheduleBtn" class="copy-btn" style="display:none;" aria-label="Copy schedule to clipboard">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Copy Schedule
+        </button>
+        <button id="downloadInviteBtn" class="copy-btn download-invite-btn" style="display:none;" aria-label="Download calendar invite (.ics file)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Download Invite
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Clock grid ──────────────────────────────────────────────────────── -->
+<main class="grid" id="grid"></main>
+
+<footer>Offsets reflect current DST where applicable.</footer>
+
+<!-- ── Mobile sticky copy bar ─────────────────────────────────────────── -->
+<div class="mobile-copy-bar" id="mobileCopyBar" aria-hidden="true">
+  <button class="mobile-copy-btn" id="mobileCopyBtn" aria-label="Copy schedule to clipboard">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+    Copy Schedule
+  </button>
+</div>
+
+<!-- ── Find Meeting Overlap Modal ─────────────────────────────────────────── -->
+<div class="overlap-modal" id="overlapModal" role="dialog" aria-modal="true" aria-label="Find meeting overlap" aria-hidden="true">
+  <div class="overlap-modal-inner">
+    <div class="overlap-modal-hd">
+      <div class="overlap-modal-titles">
+        <h2>Find Meeting Overlap</h2>
+        <p class="overlap-subtitle" id="overlapSubtitle"></p>
+        <p class="overlap-date-line" id="overlapDateLine"></p>
+      </div>
+      <button class="overlap-close" id="overlapClose" aria-label="Close">
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+          <line x1="1" y1="1" x2="10" y2="10"/><line x1="10" y1="1" x2="1" y2="10"/>
+        </svg>
+      </button>
+    </div>
+    <div class="overlap-modal-body">
+      <div>
+        <p class="overlap-section-hd">Suggested Times</p>
+        <div class="overlap-pills" id="overlapPills"></div>
+      </div>
+      <div>
+        <p class="overlap-section-hd">24-Hour Availability</p>
+        <div class="overlap-table-wrap" id="overlapTableWrap"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ICS Download Modal ──────────────────────────────────────────────────── -->
+<div class="ics-modal" id="icsModal" role="dialog" aria-modal="true" aria-label="Download calendar invite" aria-hidden="true">
+  <div class="ics-modal-inner">
+    <div class="ics-modal-hd">
+      <p class="ics-modal-context" id="icsModalContext">Download calendar invite</p>
+      <button class="ics-close-btn" id="icsCloseBtn" aria-label="Close">
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+          <line x1="1" y1="1" x2="10" y2="10"/><line x1="10" y1="1" x2="1" y2="10"/>
+        </svg>
+      </button>
+    </div>
+    <div class="ics-modal-body">
+      <div class="ics-field">
+        <label class="ics-field-label" for="icsTitleInput">Meeting title</label>
+        <input type="text" id="icsTitleInput" class="ics-title-input" placeholder="Enter meeting title" autocomplete="off">
+      </div>
+      <div class="ics-field">
+        <label class="ics-field-label" for="icsDescTextarea">Description</label>
+        <textarea id="icsDescTextarea" class="ics-desc-textarea" rows="7"></textarea>
+      </div>
+      <button id="icsDownloadBtn" class="ics-download-btn" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download .ics
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ── Curated zone catalogue ────────────────────────────────────────────── */
+const ALL_ZONES = [
+  { label: 'UTC',           tz: 'UTC',                            region: 'UTC'      },
+  // Americas (West → East)
+  { label: 'Honolulu',      tz: 'Pacific/Honolulu',               region: 'Americas' },
+  { label: 'Anchorage',     tz: 'America/Anchorage',              region: 'Americas' },
+  { label: 'Los Angeles',   tz: 'America/Los_Angeles',            region: 'Americas' },
+  { label: 'Denver',        tz: 'America/Denver',                 region: 'Americas' },
+  { label: 'Phoenix',       tz: 'America/Phoenix',                region: 'Americas' },
+  { label: 'Chicago',       tz: 'America/Chicago',                region: 'Americas' },
+  { label: 'Mexico City',   tz: 'America/Mexico_City',            region: 'Americas' },
+  { label: 'New York',      tz: 'America/New_York',               region: 'Americas' },
+  { label: 'Toronto',       tz: 'America/Toronto',                region: 'Americas' },
+  { label: 'Halifax',       tz: 'America/Halifax',                region: 'Americas' },
+  { label: 'São Paulo',     tz: 'America/Sao_Paulo',              region: 'Americas' },
+  { label: 'Buenos Aires',  tz: 'America/Argentina/Buenos_Aires', region: 'Americas' },
+  { label: 'Bogotá',        tz: 'America/Bogota',                 region: 'Americas' },
+  { label: 'Lima',          tz: 'America/Lima',                   region: 'Americas' },
+  { label: 'Caracas',       tz: 'America/Caracas',                region: 'Americas' },
+  { label: 'Vancouver',     tz: 'America/Vancouver',              region: 'Americas' },
+  // Europe
+  { label: 'Reykjavik',     tz: 'Atlantic/Reykjavik',             region: 'Europe'   },
+  { label: 'London',        tz: 'Europe/London',                  region: 'Europe'   },
+  { label: 'Lisbon',        tz: 'Europe/Lisbon',                  region: 'Europe'   },
+  { label: 'Dublin',        tz: 'Europe/Dublin',                  region: 'Europe'   },
+  { label: 'Paris',         tz: 'Europe/Paris',                   region: 'Europe'   },
+  { label: 'Berlin',        tz: 'Europe/Berlin',                  region: 'Europe'   },
+  { label: 'Madrid',        tz: 'Europe/Madrid',                  region: 'Europe'   },
+  { label: 'Rome',          tz: 'Europe/Rome',                    region: 'Europe'   },
+  { label: 'Amsterdam',     tz: 'Europe/Amsterdam',               region: 'Europe'   },
+  { label: 'Zurich',        tz: 'Europe/Zurich',                  region: 'Europe'   },
+  { label: 'Stockholm',     tz: 'Europe/Stockholm',               region: 'Europe'   },
+  { label: 'Warsaw',        tz: 'Europe/Warsaw',                  region: 'Europe'   },
+  { label: 'Helsinki',      tz: 'Europe/Helsinki',                region: 'Europe'   },
+  { label: 'Athens',        tz: 'Europe/Athens',                  region: 'Europe'   },
+  { label: 'Istanbul',      tz: 'Europe/Istanbul',                region: 'Europe'   },
+  { label: 'Moscow',        tz: 'Europe/Moscow',                  region: 'Europe'   },
+  // Africa
+  { label: 'Cairo',         tz: 'Africa/Cairo',                   region: 'Africa'   },
+  { label: 'Lagos',         tz: 'Africa/Lagos',                   region: 'Africa'   },
+  { label: 'Nairobi',       tz: 'Africa/Nairobi',                 region: 'Africa'   },
+  { label: 'Johannesburg',  tz: 'Africa/Johannesburg',            region: 'Africa'   },
+  // Asia & Middle East
+  { label: 'Riyadh',        tz: 'Asia/Riyadh',                   region: 'Asia'     },
+  { label: 'Dubai',         tz: 'Asia/Dubai',                     region: 'Asia'     },
+  { label: 'Kabul',         tz: 'Asia/Kabul',                     region: 'Asia'     },
+  { label: 'Karachi',       tz: 'Asia/Karachi',                   region: 'Asia'     },
+  { label: 'Mumbai',        tz: 'Asia/Kolkata',                   region: 'Asia'     },
+  { label: 'Colombo',       tz: 'Asia/Colombo',                   region: 'Asia'     },
+  { label: 'Kathmandu',     tz: 'Asia/Kathmandu',                 region: 'Asia'     },
+  { label: 'Dhaka',         tz: 'Asia/Dhaka',                     region: 'Asia'     },
+  { label: 'Yangon',        tz: 'Asia/Yangon',                    region: 'Asia'     },
+  { label: 'Bangkok',       tz: 'Asia/Bangkok',                   region: 'Asia'     },
+  { label: 'Singapore',     tz: 'Asia/Singapore',                 region: 'Asia'     },
+  { label: 'Hong Kong',     tz: 'Asia/Hong_Kong',                 region: 'Asia'     },
+  { label: 'Shanghai',      tz: 'Asia/Shanghai',                  region: 'Asia'     },
+  { label: 'Taipei',        tz: 'Asia/Taipei',                    region: 'Asia'     },
+  { label: 'Seoul',         tz: 'Asia/Seoul',                     region: 'Asia'     },
+  { label: 'Tokyo',         tz: 'Asia/Tokyo',                     region: 'Asia'     },
+  // Pacific & Oceania
+  { label: 'Perth',         tz: 'Australia/Perth',                region: 'Pacific'  },
+  { label: 'Darwin',        tz: 'Australia/Darwin',               region: 'Pacific'  },
+  { label: 'Adelaide',      tz: 'Australia/Adelaide',             region: 'Pacific'  },
+  { label: 'Sydney',        tz: 'Australia/Sydney',               region: 'Pacific'  },
+  { label: 'Melbourne',     tz: 'Australia/Melbourne',            region: 'Pacific'  },
+  { label: 'Brisbane',      tz: 'Australia/Brisbane',             region: 'Pacific'  },
+  { label: 'Auckland',      tz: 'Pacific/Auckland',               region: 'Pacific'  },
+  { label: 'Fiji',          tz: 'Pacific/Fiji',                   region: 'Pacific'  },
+];
+
+const REGIONS       = ['UTC', 'Americas', 'Europe', 'Africa', 'Asia', 'Pacific'];
+const DEFAULT_TZS   = ['UTC', 'America/New_York', 'Europe/London', 'Asia/Kolkata', 'Asia/Tokyo'];
+const LS_ZONES        = 'wc_zones';
+const LS_HOUR12       = 'wc_hour12';
+const LS_THEME        = 'wc_theme';
+const LS_DEFAULT_MODE = 'wc_default_mode';
+const LS_SHOW_OFFSET      = 'wc_show_offset';
+const LS_MEETING_DURATION = 'wc_meeting_duration';
+const LS_COLOR_PALETTE    = 'wc_color_palette';
+
+/* ── State ──────────────────────────────────────────────────────────────── */
+let activeZones = [];       // Array<{label, tz, region}>
+let settings    = { hour12: false, theme: 'system', colorPalette: 'ocean', defaultMode: 'live', showOffset: true, meetingDuration: 60 };
+let mode        = 'live';   // 'live' | 'custom' | 'meeting'
+let customDate  = null;     // Date | null
+let fmtTime     = {};       // {[tzId]: Intl.DateTimeFormat}
+let fmtDate     = {};       // {[tzId]: Intl.DateTimeFormat}
+let ticker      = null;
+let dragSrcTz   = null;     // tz string of the card currently being dragged
+let dragGhost   = null;     // cloned card element following the cursor
+let dragStartEl = null;     // source card DOM element
+let dragOffsetX = 0;        // cursor position within the card at drag start
+let dragOffsetY = 0;
+let dragStartX  = 0;        // initial pointer position (threshold detection)
+let dragStartY  = 0;
+
+/* ── Persist ─────────────────────────────────────────────────────────────── */
+
+// Legacy IANA timezone IDs that browsers (especially on Windows) may still report.
+// Maps old name → current canonical name used in ALL_ZONES.
+const TZ_ALIASES = {
+  'Asia/Calcutta':          'Asia/Kolkata',       // India — renamed 1993
+  'Asia/Katmandu':          'Asia/Kathmandu',     // Nepal — spelling fix
+  'Asia/Rangoon':           'Asia/Yangon',        // Myanmar — renamed 2016
+  'Asia/Dacca':             'Asia/Dhaka',         // Bangladesh — renamed 1993
+  'America/Buenos_Aires':   'America/Argentina/Buenos_Aires',
+};
+
+// Returns the user's local timezone as an ALL_ZONES entry, or null if not in catalogue.
+function detectLocalZone() {
+  try {
+    const raw = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const tz  = TZ_ALIASES[raw] ?? raw;   // resolve legacy alias if needed
+    return ALL_ZONES.find(z => z.tz === tz) ?? null;
+  } catch { return null; }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(LS_ZONES);
+    let tzList;
+    if (raw === null) {
+      // First load (key absent): surface the local timezone first.
+      // If it's already a default, reorder it to position 0 (don't duplicate).
+      // If it's a new zone, prepend it to the defaults (adds a 6th card).
+      // If detection fails, fall through to the unmodified defaults.
+      const local = detectLocalZone();
+      if (local) {
+        tzList = [local.tz, ...DEFAULT_TZS.filter(tz => tz !== local.tz)];
+      } else {
+        tzList = DEFAULT_TZS;
+      }
+    } else {
+      tzList = JSON.parse(raw);
+    }
+    activeZones = (Array.isArray(tzList) ? tzList : DEFAULT_TZS)
+      .map(tz => ALL_ZONES.find(z => z.tz === tz))
+      .filter(Boolean);
+    if (!activeZones.length)
+      activeZones = DEFAULT_TZS.map(tz => ALL_ZONES.find(z => z.tz === tz)).filter(Boolean);
+    settings.hour12        = localStorage.getItem(LS_HOUR12) === 'true';
+    settings.theme         = localStorage.getItem(LS_THEME) || 'system';
+    settings.colorPalette  = localStorage.getItem(LS_COLOR_PALETTE) || 'ocean';
+    settings.defaultMode   = localStorage.getItem(LS_DEFAULT_MODE) || 'live';
+    settings.showOffset    = localStorage.getItem(LS_SHOW_OFFSET) !== 'false'; // default true
+    const rawDur = parseInt(localStorage.getItem(LS_MEETING_DURATION), 10);
+    settings.meetingDuration = (!isNaN(rawDur) && rawDur > 0) ? rawDur : 60;
+  } catch {
+    activeZones = DEFAULT_TZS.map(tz => ALL_ZONES.find(z => z.tz === tz)).filter(Boolean);
+  }
+}
+
+function saveZones() {
+  try { localStorage.setItem(LS_ZONES, JSON.stringify(activeZones.map(z => z.tz))); } catch {}
+}
+function saveSettings() {
+  try {
+    localStorage.setItem(LS_HOUR12, String(settings.hour12));
+    localStorage.setItem(LS_THEME, settings.theme);
+    localStorage.setItem(LS_COLOR_PALETTE, settings.colorPalette);
+    localStorage.setItem(LS_DEFAULT_MODE, settings.defaultMode);
+    localStorage.setItem(LS_SHOW_OFFSET, String(settings.showOffset));
+    localStorage.setItem(LS_MEETING_DURATION, String(settings.meetingDuration));
+  } catch {}
+}
+
+/* ── Theme ───────────────────────────────────────────────────────────────── */
+function applyTheme(theme) {
+  settings.theme = theme;
+  const html = document.documentElement;
+  // 'system' → remove attribute so the @media query takes effect
+  if (theme === 'system') html.removeAttribute('data-theme');
+  else                    html.setAttribute('data-theme', theme);
+  // Sync segmented control
+  document.querySelectorAll('[data-theme-btn]').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.themeBtn === theme));
+  saveSettings();
+}
+
+/* ── Color Palette ───────────────────────────────────────────────────────── */
+function applyColorPalette(palette) {
+  const html = document.documentElement;
+  if (palette === 'default') html.removeAttribute('data-color-palette');
+  else                       html.setAttribute('data-color-palette', palette);
+  settings.colorPalette = palette;
+  saveSettings();
+  syncSettingsUI();
+}
+
+/* ── Formatters ──────────────────────────────────────────────────────────── */
+function tzToId(tz) {
+  // Produces a valid, unique HTML ID fragment: 'zUTC', 'zAmericaNewYork', etc.
+  return 'z' + tz.replace(/[^a-zA-Z0-9]/g, '');
+}
+
+function buildFormatters() {
+  fmtTime = {};
+  fmtDate = {};
+  activeZones.forEach(zone => {
+    const id = tzToId(zone.tz);
+    fmtTime[id] = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone.tz,
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: settings.hour12,
+    });
+    fmtDate[id] = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone.tz,
+      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+    });
+  });
+}
+
+function buildOneFormatter(zone) {
+  const id = tzToId(zone.tz);
+  fmtTime[id] = new Intl.DateTimeFormat('en-US', {
+    timeZone: zone.tz,
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: settings.hour12,
+  });
+  fmtDate[id] = new Intl.DateTimeFormat('en-US', {
+    timeZone: zone.tz,
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+  });
+}
+
+/* ── UTC offset helper ───────────────────────────────────────────────────── */
+function getOffset(tz, date) {
+  try {
+    const parts = new Intl.DateTimeFormat('en', {
+      timeZone: tz, timeZoneName: 'longOffset',
+    }).formatToParts(date);
+    const raw = parts.find(p => p.type === 'timeZoneName')?.value ?? '';
+    if (!raw || raw === 'GMT') return 'UTC\u00B100:00';
+    return 'UTC' + raw.slice(3);   // "GMT+05:30" → "UTC+05:30"
+  } catch { return 'UTC+00:00'; }
+}
+
+/* ── Card DOM ────────────────────────────────────────────────────────────── */
+function createCard(zone) {
+  const id  = tzToId(zone.tz);
+  const el  = document.createElement('article');
+  el.className   = 'card';
+  el.dataset.tz  = zone.tz;
+  el.setAttribute('aria-label', `${zone.label} time`);
+  el.innerHTML = `
+    <button class="card-remove" data-tz="${zone.tz}" aria-label="Remove ${zone.label}" tabindex="-1">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+        <line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/>
+      </svg>
+    </button>
+    <div class="card-label-row">
+      <div class="card-label">${zone.label}</div>
+      <span class="period-icon" id="period-${id}" aria-hidden="true"></span>
+    </div>
+    <div class="card-tz">${zone.tz}</div>
+    <div class="card-time-wrap">
+      <div class="card-time" aria-live="polite" aria-atomic="true">
+        <span class="time-hm"   id="hm-${id}">--:--</span><span
+             class="time-sec"   id="sec-${id}">:--</span><span
+             class="time-ampm"  id="ampm-${id}"></span>
+      </div>
+      <div class="card-meeting-end" id="meeting-end-${id}"></div>
+    </div>
+    <div class="card-date" id="date-${id}">Loading\u2026</div>
+    <div class="card-work-status" id="work-status-${id}"></div>
+    <div class="card-footer">
+      <div class="card-offset" id="offset-${id}">UTC+00:00</div>
+      <button class="card-copy" data-tz="${zone.tz}" aria-label="Copy ${zone.label} time" tabindex="-1">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      </button>
+    </div>
+  `;
+  // Show hover-only buttons in keyboard tab-order while card is hovered
+  el.addEventListener('mouseenter', () => {
+    el.querySelector('.card-remove').tabIndex = 0;
+    el.querySelector('.card-copy').tabIndex = 0;
+  });
+  el.addEventListener('mouseleave', () => {
+    el.querySelector('.card-remove').tabIndex = -1;
+    el.querySelector('.card-copy').tabIndex = -1;
+  });
+
+  // ── Drag-and-drop reordering (mouse-event based for full visual control) ──
+  el.addEventListener('mousedown', e => {
+    if (e.button !== 0 || e.target.closest('button')) return;
+    const rect  = el.getBoundingClientRect();
+    dragSrcTz   = zone.tz;
+    dragStartEl = el;
+    dragOffsetX = e.clientX - rect.left;
+    dragOffsetY = e.clientY - rect.top;
+    dragStartX  = e.clientX;
+    dragStartY  = e.clientY;
+  });
+
+  return el;
+}
+
+function updateCard(zone, now) {
+  const id = tzToId(zone.tz);
+  if (!fmtTime[id]) return;
+
+  const parts = fmtTime[id].formatToParts(now);
+  const get   = type => parts.find(p => p.type === type)?.value ?? '--';
+
+  const hmEl    = document.getElementById(`hm-${id}`);
+  const secEl   = document.getElementById(`sec-${id}`);
+  const ampmEl  = document.getElementById(`ampm-${id}`);
+  const dateEl  = document.getElementById(`date-${id}`);
+  const offEl   = document.getElementById(`offset-${id}`);
+  if (!hmEl) return;  // not yet in DOM
+
+  hmEl.textContent  = `${get('hour')}:${get('minute')}`;
+  secEl.textContent = `:${get('second')}`;
+  // dayPeriod is present only in 12-hour mode
+  const dp = parts.find(p => p.type === 'dayPeriod' || p.type === 'dayperiod');
+  ampmEl.textContent = dp ? dp.value : '';
+  dateEl.textContent = fmtDate[id].format(now);
+  offEl.textContent  = getOffset(zone.tz, now);
+
+  // ── Day/Night period indicator ──────────────────────────────────────────
+  const period = getDayPeriod(zone.tz, now);
+  const periodIcons = { day: '☀️', twilight: '🌅', night: '🌙' };
+  const periodEl = document.getElementById(`period-${id}`);
+  if (periodEl) periodEl.textContent = periodIcons[period] || '';
+  const cardEl = document.querySelector(`.card[data-tz="${zone.tz}"]`);
+  if (cardEl) cardEl.dataset.period = period;
+
+  // ── Working hours status ─────────────────────────────────────────────────
+  const workStatusEl = document.getElementById(`work-status-${id}`);
+  if (workStatusEl) {
+    const ws = getWorkStatus(zone.tz, now);
+    if (ws) {
+      workStatusEl.textContent  = ws.label;
+      workStatusEl.dataset.type = ws.type;
+    } else {
+      workStatusEl.textContent  = '';
+      workStatusEl.dataset.type = '';
+    }
+  }
+
+  // ── Meeting end-time ─────────────────────────────────────────────────────
+  const meetEndEl = document.getElementById(`meeting-end-${id}`);
+  if (meetEndEl) {
+    if (mode === 'meeting') {
+      const endDate = new Date(now.getTime() + settings.meetingDuration * 60000);
+
+      // Format end time using the same hour12 preference as main time display
+      const endTimeParts = new Intl.DateTimeFormat('en-US', {
+        timeZone: zone.tz,
+        hour:     'numeric',
+        minute:   '2-digit',
+        hour12:   settings.hour12,
+      }).formatToParts(endDate);
+      const endHM = endTimeParts
+        .filter(p => ['hour', 'literal', 'minute'].includes(p.type))
+        .map(p => p.value).join('');
+      const endDP = endTimeParts.find(p => p.type === 'dayPeriod' || p.type === 'dayperiod');
+      const endAmPm = endDP ? `\u202F${endDP.value}` : '';  // narrow no-break space before AM/PM
+
+      // Detect midnight crossover (start and end land on different calendar days)
+      const startDateStr = getLocalDateStr(zone.tz, now);
+      const endDateStr   = getLocalDateStr(zone.tz, endDate);
+      const nextDay      = startDateStr !== endDateStr && startDateStr !== '';
+
+      meetEndEl.innerHTML =
+        `\u2192 <span class="meet-end-time">${endHM}${endAmPm}</span>` +
+        (nextDay ? ' <span class="meet-next-day">+1</span>' : '');
+
+      // ── Conflict highlighting ────────────────────────────────────────────
+      const startWs = getWorkStatus(zone.tz, now);
+      const endWs   = getWorkStatus(zone.tz, endDate);
+      const hasConflict = (startWs && startWs.type !== 'ok') ||
+                          (endWs   && endWs.type   !== 'ok');
+      if (cardEl) cardEl.classList.toggle('schedule-conflict', hasConflict);
+    } else {
+      meetEndEl.innerHTML = '';
+    }
+  }
+}
+
+/* ── Drag-and-drop handlers ──────────────────────────────────────────────── */
+function handleDragMove(e) {
+  if (!dragStartEl) return;
+
+  if (!dragGhost) {
+    // Wait for a small threshold to distinguish a drag from a regular click
+    if (Math.abs(e.clientX - dragStartX) < 5 && Math.abs(e.clientY - dragStartY) < 5) return;
+
+    dragGhost = dragStartEl.cloneNode(true);
+    Object.assign(dragGhost.style, {
+      position:        'fixed',
+      pointerEvents:   'none',
+      zIndex:          '9999',
+      width:           dragStartEl.offsetWidth + 'px',
+      margin:          '0',
+      transition:      'none',
+      transform:       'scale(1.03)',
+      transformOrigin: '0 0',
+      boxShadow:       '0 16px 40px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.18)',
+    });
+    document.body.appendChild(dragGhost);
+    document.body.classList.add('is-dragging-card');
+    dragStartEl.classList.add('drag-placeholder');
+  }
+
+  dragGhost.style.left = (e.clientX - dragOffsetX) + 'px';
+  dragGhost.style.top  = (e.clientY - dragOffsetY) + 'px';
+
+  // Update drop-target indicator on whichever card is under the cursor
+  dragGhost.style.visibility = 'hidden';
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  dragGhost.style.visibility = '';
+  document.querySelectorAll('.card').forEach(c =>
+    c.classList.remove('drag-over-before', 'drag-over-after'));
+  const overCard = under?.closest('.card[data-tz]');
+  if (overCard && overCard !== dragStartEl) {
+    const r = overCard.getBoundingClientRect();
+    overCard.classList.add(e.clientX < r.left + r.width / 2 ? 'drag-over-before' : 'drag-over-after');
+  }
+}
+
+function handleDragEnd(e) {
+  if (!dragStartEl) return;
+
+  if (dragGhost) {
+    // Restore the source card to its normal appearance
+    dragStartEl.classList.remove('drag-placeholder');
+
+    // Find the card under the cursor at the moment of release
+    dragGhost.style.visibility = 'hidden';
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    dragGhost.style.visibility = '';
+
+    const overCard = under?.closest('.card[data-tz]');
+    if (overCard && dragSrcTz && overCard.dataset.tz !== dragSrcTz) {
+      const r           = overCard.getBoundingClientRect();
+      const insertBefore = e.clientX < r.left + r.width / 2;
+      const srcIdx      = activeZones.findIndex(z => z.tz === dragSrcTz);
+      if (srcIdx !== -1) {
+        const [moved] = activeZones.splice(srcIdx, 1);
+        const tgtIdx  = activeZones.findIndex(z => z.tz === overCard.dataset.tz);
+        activeZones.splice(insertBefore ? tgtIdx : tgtIdx + 1, 0, moved);
+        saveZones();
+        rebuildGrid();
+        activeZones.forEach(z => updateCard(z, getDisplayDate()));
+      }
+    }
+
+    dragGhost.remove();
+    dragGhost = null;
+    document.body.classList.remove('is-dragging-card');
+  }
+
+  document.querySelectorAll('.card').forEach(c =>
+    c.classList.remove('drag-over-before', 'drag-over-after'));
+  dragSrcTz   = null;
+  dragStartEl = null;
+}
+
+/* ── Grid ────────────────────────────────────────────────────────────────── */
+function rebuildGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  activeZones.forEach(zone => grid.appendChild(createCard(zone)));
+}
+
+/* ── Dropdown ────────────────────────────────────────────────────────────── */
+function refreshDropdown() {
+  const select    = document.getElementById('tzSelect');
+  const activeTzs = new Set(activeZones.map(z => z.tz));
+  select.innerHTML = '<option value="">+ Add time zone</option>';
+  REGIONS.forEach(region => {
+    const available = ALL_ZONES.filter(z => z.region === region && !activeTzs.has(z.tz));
+    if (!available.length) return;
+    const grp = document.createElement('optgroup');
+    grp.label = region;
+    available.forEach(z => {
+      const opt = document.createElement('option');
+      opt.value = z.tz;
+      opt.textContent = z.label;
+      grp.appendChild(opt);
+    });
+    select.appendChild(grp);
+  });
+  select.value = '';
+}
+
+/* ── Add / Remove zone ───────────────────────────────────────────────────── */
+function addZone(tz) {
+  const zone = ALL_ZONES.find(z => z.tz === tz);
+  if (!zone || activeZones.some(z => z.tz === tz)) return;
+
+  activeZones.push(zone);
+  buildOneFormatter(zone);
+
+  const card = createCard(zone);
+  // Set initial hidden state with separate props so the double-rAF can
+  // restore only 'transition', keeping opacity:0 intact as the start value.
+  card.style.opacity    = '0';
+  card.style.transform  = 'translateY(14px)';
+  card.style.transition = 'none';
+  document.getElementById('grid').appendChild(card);
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {                    // double-rAF: browser paints initial state first
+      card.style.transition = '';                    // restore class-driven transitions
+      card.style.opacity    = '1';                   // animate 0 → 1
+      card.style.transform  = 'translateY(0)';       // animate 14px → 0
+      setTimeout(() => {
+        card.style.opacity = card.style.transform = card.style.transition = '';
+      }, 350);
+    });
+  });
+
+  const now = getDisplayDate();
+  if (now) updateCard(zone, now);
+  refreshDropdown();
+  saveZones();
+  updateCopyBtnVisibility();
+  updateFindOverlapBtnVisibility();
+  updateClearAllBtnVisibility();
+  updateMobileCopyBarVisibility();
+}
+
+function removeZone(tz) {
+  const idx = activeZones.findIndex(z => z.tz === tz);
+  if (idx === -1) return;
+
+  const card = Array.from(document.getElementById('grid').children)
+    .find(c => c.dataset.tz === tz);
+  if (card) {
+    card.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
+    card.style.opacity    = '0';
+    card.style.transform  = 'scale(0.94)';
+    setTimeout(() => card.remove(), 240);
+  }
+
+  activeZones.splice(idx, 1);
+  const id = tzToId(tz);
+  delete fmtTime[id];
+  delete fmtDate[id];
+  refreshDropdown();
+  saveZones();
+  updateCopyBtnVisibility();
+  updateFindOverlapBtnVisibility();
+  updateClearAllBtnVisibility();
+  updateMobileCopyBarVisibility();
+}
+
+/* ── Custom time parts helpers ───────────────────────────────────────────── */
+
+// Rebuild hour options (1–12 or 00–23) and show/hide AM/PM to match settings.hour12.
+// Preserves the currently displayed logical hour so switching format doesn't change the time.
+function rebuildHourOptions() {
+  const hourSel = document.getElementById('customHourPart');
+  const ampmSel = document.getElementById('customAmPmPart');
+
+  // Read the current logical 24h hour before wiping options
+  let hour24;
+  if (settings.hour12) {
+    const h12  = parseInt(hourSel.value, 10) || 12;
+    const isPM = ampmSel.value === 'PM';
+    hour24 = (h12 === 12 ? 0 : h12) + (isPM ? 12 : 0);
+  } else {
+    hour24 = parseInt(hourSel.value, 10) || 0;
+  }
+
+  hourSel.innerHTML = '';
+
+  if (settings.hour12) {
+    for (let h = 1; h <= 12; h++) {
+      const opt = document.createElement('option');
+      opt.value = String(h);
+      opt.textContent = String(h).padStart(2, '0');
+      hourSel.appendChild(opt);
+    }
+    hourSel.value = String(hour24 % 12 || 12);  // 0→12, 13→1, 12→12
+    ampmSel.value = hour24 >= 12 ? 'PM' : 'AM';
+    ampmSel.style.display = '';
+  } else {
+    for (let h = 0; h < 24; h++) {
+      const opt = document.createElement('option');
+      opt.value = String(h);
+      opt.textContent = String(h).padStart(2, '0');
+      hourSel.appendChild(opt);
+    }
+    hourSel.value = String(hour24);
+    ampmSel.style.display = 'none';
+  }
+}
+
+function getCustomDateTime() {
+  const datePart = document.getElementById('customDatePart').value;
+  if (!datePart) return null;
+  let hour = parseInt(document.getElementById('customHourPart').value, 10) || 0;
+  if (settings.hour12) {
+    const ampm = document.getElementById('customAmPmPart').value;
+    // Convert 12h → 24h:  12 AM → 0,  1–11 AM → 1–11,  12 PM → 12,  1–11 PM → 13–23
+    hour = ampm === 'AM' ? (hour === 12 ? 0 : hour) : (hour === 12 ? 12 : hour + 12);
+  }
+  const minute = parseInt(document.getElementById('customMinutePart').value, 10) || 0;
+  const hh = String(hour).padStart(2, '0');
+  const mm = String(minute).padStart(2, '0');
+  return new Date(`${datePart}T${hh}:${mm}`);
+}
+
+function applyPreset(type) {
+  const now    = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  let target;
+
+  if (type === 'now') {
+    target = now;
+  } else if (type === 'next-hour') {
+    target = new Date(now);
+    target.setMinutes(0, 0, 0);
+    target.setHours(target.getHours() + 1);
+  } else if (type === 'in-30') {
+    target = new Date(now.getTime() + 30 * 60000);
+    // snap to nearest 15-min slot
+    const m = target.getMinutes();
+    target.setMinutes(Math.round(m / 15) * 15, 0, 0);
+  } else if (type === 'tomorrow-9am') {
+    target = new Date(now);
+    target.setDate(target.getDate() + 1);
+    target.setHours(9, 0, 0, 0);
+  } else {
+    return;
+  }
+
+  // Fill the date/time selects
+  const local = new Date(target.getTime() - offset);
+  document.getElementById('customDatePart').value = local.toISOString().slice(0, 10);
+
+  const h24 = target.getHours();
+  if (settings.hour12) {
+    document.getElementById('customHourPart').value = String(h24 % 12 || 12);
+    document.getElementById('customAmPmPart').value = h24 >= 12 ? 'PM' : 'AM';
+  } else {
+    document.getElementById('customHourPart').value = String(h24);
+  }
+  document.getElementById('customMinutePart').value =
+    String(Math.floor(target.getMinutes() / 15) * 15);
+
+  // Trigger a card update
+  customDate = getCustomDateTime();
+  if (customDate && !isNaN(customDate))
+    activeZones.forEach(zone => updateCard(zone, customDate));
+}
+
+/* ── Mode (live / custom / meeting) ──────────────────────────────────────── */
+function getDisplayDate() {
+  return (mode === 'custom' || mode === 'meeting') ? customDate : new Date();
+}
+
+function setMode(newMode) {
+  const prevMode = mode;
+  mode = newMode;
+  document.querySelectorAll('.mode-btn').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.mode === newMode));
+
+  const customGroup       = document.getElementById('customTimeGroup');
+  const durationGroup     = document.getElementById('meetingDurationGroup');
+  const timePresets       = document.getElementById('timePresets');
+  const timeControlsBox   = document.getElementById('timeControlsBox');
+  const liveDot           = document.getElementById('liveDot');
+  const subText           = document.getElementById('headerSubText');
+  const timeLabel         = document.getElementById('timeInputLabel');
+  const downloadInviteBtn = document.getElementById('downloadInviteBtn');
+
+  // Reset groups first, then re-apply per mode
+  customGroup.classList.remove('visible');
+  durationGroup.classList.remove('visible');
+  timePresets.classList.remove('visible');
+  timeControlsBox.classList.remove('visible');
+  document.body.classList.remove('meeting-mode');
+  if (downloadInviteBtn) downloadInviteBtn.style.display = 'none';
+
+  // Clear conflict flags when leaving schedule mode
+  if (prevMode === 'meeting' && newMode !== 'meeting') {
+    document.querySelectorAll('.card.schedule-conflict')
+      .forEach(c => c.classList.remove('schedule-conflict'));
+  }
+
+  if (newMode === 'live') {
+    liveDot.classList.remove('hidden');
+    subText.textContent = 'Now \u2014 showing live time across all zones';
+    customDate = null;
+    activeZones.forEach(zone => updateCard(zone, new Date()));
+  } else {
+    // Both 'plan a time' and 'schedule' use the custom time selects for start time
+    liveDot.classList.add('hidden');
+    timeControlsBox.classList.add('visible');
+    customGroup.classList.add('visible');
+    timePresets.classList.add('visible');
+
+    if (newMode === 'meeting') {
+      durationGroup.classList.add('visible');
+      document.body.classList.add('meeting-mode');
+      if (downloadInviteBtn) downloadInviteBtn.style.display = '';
+      subText.textContent = 'Schedule \u2014 pick a start time and duration';
+      if (timeLabel) timeLabel.textContent = 'Starts at:';
+    } else {
+      subText.textContent = 'Plan a time \u2014 pick any moment to compare';
+      if (timeLabel) timeLabel.textContent = 'Show clocks at:';
+    }
+
+    if (!document.getElementById('customDatePart').value) {
+      // Pre-fill with current local time; minute rounded down to nearest 15
+      const now    = new Date();
+      const offset = now.getTimezoneOffset() * 60000;
+      const local  = new Date(now - offset);
+      const h24    = now.getHours();
+      document.getElementById('customDatePart').value   = local.toISOString().slice(0, 10);
+      if (settings.hour12) {
+        document.getElementById('customHourPart').value  = String(h24 % 12 || 12);
+        document.getElementById('customAmPmPart').value  = h24 >= 12 ? 'PM' : 'AM';
+      } else {
+        document.getElementById('customHourPart').value  = String(h24);
+      }
+      document.getElementById('customMinutePart').value = String(Math.floor(now.getMinutes() / 15) * 15);
+    }
+    customDate = getCustomDateTime();
+    if (customDate && !isNaN(customDate)) activeZones.forEach(zone => updateCard(zone, customDate));
+  }
+}
+
+/* ── Tick ────────────────────────────────────────────────────────────────── */
+function tick() {
+  if (mode !== 'live') return;
+  const now = new Date();
+  activeZones.forEach(zone => updateCard(zone, now));
+}
+
+/* ── Settings panel ──────────────────────────────────────────────────────── */
+function openSettings() {
+  document.getElementById('settingsPanel').classList.add('open');
+  document.getElementById('settingsOverlay').classList.add('open');
+  document.getElementById('gearBtn').classList.add('open');
+  document.getElementById('gearBtn').setAttribute('aria-expanded', 'true');
+}
+function closeSettings() {
+  document.getElementById('settingsPanel').classList.remove('open');
+  document.getElementById('settingsOverlay').classList.remove('open');
+  document.getElementById('gearBtn').classList.remove('open');
+  document.getElementById('gearBtn').setAttribute('aria-expanded', 'false');
+}
+
+/* ── Settings UI sync ────────────────────────────────────────────────────── */
+function syncSettingsUI() {
+  document.querySelectorAll('[data-fmt]').forEach(btn =>
+    btn.classList.toggle('active', (btn.dataset.fmt === '12') === settings.hour12));
+  document.querySelectorAll('[data-theme-btn]').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.themeBtn === settings.theme));
+  document.querySelectorAll('[data-default-mode]').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.defaultMode === settings.defaultMode));
+  document.querySelectorAll('[data-offset]').forEach(btn =>
+    btn.classList.toggle('active', (btn.dataset.offset === 'true') === settings.showOffset));
+  document.querySelectorAll('[data-palette]').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.palette === settings.colorPalette));
+}
+
+/* ── Day/Night helpers ───────────────────────────────────────────────────── */
+function getLocalHour(tz, date) {
+  // Returns the hour (0-23) in the given timezone using Intl.DateTimeFormat.
+  // This correctly handles non-whole-hour offsets (e.g. IST UTC+5:30, NPT UTC+5:45).
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hour: '2-digit', hour12: false,
+    }).formatToParts(date);
+    const h = parts.find(p => p.type === 'hour')?.value;
+    if (!h) return -1;
+    const n = parseInt(h, 10);
+    return n === 24 ? 0 : n;   // some engines return 24 for midnight
+  } catch { return -1; }
+}
+
+function getLocalDateStr(tz, date) {
+  // Returns local calendar date as 'YYYY-MM-DD' in the given timezone.
+  // Used to detect midnight crossover in meeting mode.
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(date);
+    const get = t => parts.find(p => p.type === t)?.value ?? '00';
+    return `${get('year')}-${get('month')}-${get('day')}`;
+  } catch { return ''; }
+}
+
+function getDayPeriod(tz, date) {
+  const h = getLocalHour(tz, date);
+  if (h === -1) return 'day';         // safe fallback
+  if (h >= 6 && h <= 18) return 'day';        // 06:00–18:59
+  if (h === 5 || h === 19) return 'twilight'; // 05:xx or 19:xx
+  return 'night';                              // 20:00–04:59
+}
+
+function getWorkStatus(tz, date) {
+  const h = getLocalHour(tz, date);
+  if (h === -1) return null;
+  if (h >= 9  && h <= 17) return { label: 'Business hours', type: 'ok'      };
+  if (h >= 6  && h <= 8 ) return { label: 'Early morning',  type: 'early'   };
+  if (h >= 18 && h <= 20) return { label: 'Evening',        type: 'evening' };
+  return                           { label: 'Late night',    type: 'night'   };
+}
+
+/* ── Copy Schedule ───────────────────────────────────────────────────────── */
+let copyDebounceTimer = null;
+
+function formatDuration(minutes) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h} hr`;
+  return `${h} hr ${m} min`;
+}
+
+function updateCopyBtnVisibility() {
+  const btn = document.getElementById('copyScheduleBtn');
+  if (btn) btn.style.display = activeZones.length > 0 ? '' : 'none';
+}
+
+function updateClearAllBtnVisibility() {
+  const btn = document.getElementById('clearAllBtn');
+  if (btn) btn.style.display = activeZones.length > 0 ? '' : 'none';
+}
+
+function updateMobileCopyBarVisibility() {
+  const bar = document.getElementById('mobileCopyBar');
+  if (!bar) return;
+  const visible = activeZones.length > 0;
+  bar.style.display = visible ? '' : 'none';
+  bar.ariaHidden    = String(!visible);
+}
+
+function clearAllZones() {
+  Array.from(document.getElementById('grid').children).forEach(card => {
+    card.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
+    card.style.opacity    = '0';
+    card.style.transform  = 'scale(0.94)';
+    setTimeout(() => card.remove(), 240);
+  });
+  activeZones = [];
+  fmtTime = {};
+  fmtDate = {};
+  refreshDropdown();
+  // Remove the key entirely (rather than storing []) so the next reload
+  // treats it as a first load and re-runs local timezone detection.
+  try { localStorage.removeItem(LS_ZONES); } catch {}
+  updateCopyBtnVisibility();
+  updateFindOverlapBtnVisibility();
+  updateClearAllBtnVisibility();
+  updateMobileCopyBarVisibility();
+}
+
+function getTzAbbr(tz, date) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, timeZoneName: 'short',
+    }).formatToParts(date);
+    const raw = parts.find(p => p.type === 'timeZoneName')?.value ?? '';
+    // If it's a generic offset like "GMT+5" or "GMT-8:00", fall back to UTC offset
+    if (!raw || /^GMT[+-]/.test(raw)) return getOffset(tz, date);
+    return raw;
+  } catch { return getOffset(tz, date); }
+}
+
+function buildScheduleText(date) {
+  const isMeeting = mode === 'meeting';
+  const endDate   = isMeeting
+    ? new Date(date.getTime() + settings.meetingDuration * 60000)
+    : null;
+
+  const header = isMeeting
+    ? `Meeting Times (${formatDuration(settings.meetingDuration)}):`
+    : 'Meeting Times Across Time Zones:';
+  const lines = [header];
+
+  activeZones.forEach(zone => {
+    const abbr     = getTzAbbr(zone.tz, date);
+    const datePart = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone.tz,
+      weekday: 'long', month: 'short', day: 'numeric', year: 'numeric',
+    }).format(date);
+    const startTime = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone.tz, hour: 'numeric', minute: '2-digit', hour12: true,
+    }).format(date);
+
+    if (isMeeting) {
+      const endTime = new Intl.DateTimeFormat('en-US', {
+        timeZone: zone.tz, hour: 'numeric', minute: '2-digit', hour12: true,
+      }).format(endDate);
+      lines.push(`- ${zone.label} (${abbr}): ${datePart} \u00B7 ${startTime} \u2013 ${endTime}`);
+    } else {
+      lines.push(`- ${zone.label} (${abbr}): ${datePart} at ${startTime}`);
+    }
+  });
+  return lines.join('\n');
+}
+
+function showCopiedFeedback() {
+  const btn = document.getElementById('copyScheduleBtn');
+  if (!btn) return;
+  const prev = btn.innerHTML;
+  btn.textContent = '\u2713 Copied!';
+  btn.disabled = true;
+  setTimeout(() => { btn.innerHTML = prev; btn.disabled = false; }, 2000);
+}
+
+function showCopyFallbackModal(text) {
+  const modal = document.createElement('div');
+  modal.className = 'copy-modal';
+  const inner = document.createElement('div');
+  inner.className = 'copy-modal-inner';
+  const p = document.createElement('p');
+  p.textContent = 'Copy the text below to share your schedule:';
+  const ta = document.createElement('textarea');
+  ta.readOnly = true;
+  ta.value = text;
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'modal-close';
+  closeBtn.textContent = 'Close';
+  closeBtn.addEventListener('click', () => modal.remove());
+  inner.append(p, ta, closeBtn);
+  modal.appendChild(inner);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+  setTimeout(() => ta.select(), 50);
+}
+
+function legacyCopy(text) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (ok) showCopiedFeedback();
+    else showCopyFallbackModal(text);
+  } catch { showCopyFallbackModal(text); }
+}
+
+function copySchedule() {
+  if (!activeZones.length) return;
+  if (copyDebounceTimer) return;       // debounce: ignore rapid repeated clicks
+  copyDebounceTimer = setTimeout(() => { copyDebounceTimer = null; }, 1000);
+
+  const date = getDisplayDate() || new Date();
+  const text = buildScheduleText(date);
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(showCopiedFeedback)
+      .catch(() => legacyCopy(text));
+  } else {
+    legacyCopy(text);
+  }
+}
+
+/* ── Per-tile copy ───────────────────────────────────────────────────────── */
+function copyTileTime(zone, btn) {
+  const date     = getDisplayDate() || new Date();
+  const abbr     = getTzAbbr(zone.tz, date);
+  const datePart = new Intl.DateTimeFormat('en-US', {
+    timeZone: zone.tz,
+    weekday: 'long', month: 'short', day: 'numeric', year: 'numeric',
+  }).format(date);
+
+  let text;
+  if (mode === 'meeting') {
+    const endDate   = new Date(date.getTime() + settings.meetingDuration * 60000);
+    const startTime = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone.tz, hour: 'numeric', minute: '2-digit', hour12: true,
+    }).format(date);
+    const endTime = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone.tz, hour: 'numeric', minute: '2-digit', hour12: true,
+    }).format(endDate);
+    text = `${zone.label} (${abbr}): ${datePart} \u00B7 ${startTime} \u2013 ${endTime}`;
+  } else {
+    const timePart = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone.tz, hour: 'numeric', minute: '2-digit', hour12: true,
+    }).format(date);
+    text = `${zone.label} (${abbr}): ${datePart} at ${timePart}`;
+  }
+
+  function onCopied() {
+    const prev = btn.innerHTML;
+    btn.classList.add('copied');
+    btn.innerHTML = '✓';
+    setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = prev; }, 1500);
+  }
+
+  function fallback() {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (ok) onCopied();
+      else showCopyFallbackModal(text);
+    } catch { showCopyFallbackModal(text); }
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(onCopied).catch(fallback);
+  } else {
+    fallback();
+  }
+}
+
+/* ── Find Meeting Overlap ────────────────────────────────────────────────── */
+
+function updateFindOverlapBtnVisibility() {
+  const btn = document.getElementById('findOverlapBtn');
+  if (btn) btn.style.display = activeZones.length > 0 ? '' : 'none';
+}
+
+function getDecimalHour(date, timeZone) {
+  // Returns the local decimal hour (e.g. 14.5 for 14:30) for a given Date in a given IANA tz.
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone, hour: 'numeric', minute: 'numeric', hour12: false,
+    }).formatToParts(date);
+    const h = parseInt(parts.find(p => p.type === 'hour')?.value   ?? '0', 10);
+    const m = parseInt(parts.find(p => p.type === 'minute')?.value ?? '0', 10);
+    return (h === 24 ? 0 : h) + m / 60;
+  } catch { return 0; }
+}
+
+function getZonePenalty(h) {
+  // Penalty table for how disruptive a given local decimal hour is.
+  if (h >= 9   && h < 18)  return 0;   // Business hours — ideal
+  if (h >= 6.5 && h < 9)   return 1;   // Early morning — manageable
+  if (h >= 18  && h < 21)  return 1;   // Evening — manageable
+  if (h >= 21  && h < 23)  return 3;   // Late evening — uncomfortable
+  if (h >= 5   && h < 6.5) return 3;   // Very early — uncomfortable
+  return 6;                             // Deep night — extreme
+}
+
+function findBestOverlapSlots(baseDate) {
+  // Tiered approach: always returns results, falling back through tiers.
+  // baseDate anchors the 48-slot window so DST offsets are correct for that date.
+  const today = new Date(baseDate.getTime());
+  today.setHours(0, 0, 0, 0);
+  const half = settings.meetingDuration / 2;
+
+  // Score every 30-min slot using midpoint decimal hours.
+  const scored = [];
+  for (let i = 0; i < 48; i++) {
+    const t   = new Date(today.getTime() + i * 30 * 60000);
+    const mid = new Date(t.getTime() + half * 60000);
+    let totalPenalty = 0, worstPenalty = 0, avgHour = 0;
+    activeZones.forEach(zone => {
+      const h = getDecimalHour(mid, zone.tz);
+      const p = getZonePenalty(h);
+      totalPenalty += p;
+      if (p > worstPenalty) worstPenalty = p;
+      avgHour += h;
+    });
+    avgHour /= (activeZones.length || 1);
+    scored.push({ t, totalPenalty, worstPenalty, avgHour });
+  }
+
+  // Sort: ascending penalty, then ascending |avgHour - 12| for midday preference.
+  const sortFn = (a, b) =>
+    (a.totalPenalty - b.totalPenalty) ||
+    (Math.abs(a.avgHour - 12) - Math.abs(b.avgHour - 12));
+
+  // Tier 1: all zones in business hours (totalPenalty === 0).
+  const tier1 = scored.filter(s => s.totalPenalty === 0).sort(sortFn);
+  if (tier1.length) return {
+    slots:    tier1.slice(0, 10).map(s => s.t),
+    allSlots: tier1.map(s => s.t),
+    tier: 1,
+    label: '✓ Available during business hours',
+  };
+
+  // Tier 2: no zone has extreme hours (worstPenalty < 3).
+  const tier2 = scored.filter(s => s.worstPenalty < 3).sort(sortFn);
+  if (tier2.length) return {
+    slots:    tier2.slice(0, 10).map(s => s.t),
+    allSlots: tier2.map(s => s.t),
+    tier: 2,
+    label: '⚠ No business hour overlap — manageable times for all parties',
+  };
+
+  // Tier 3: best compromise — minimise total penalty.
+  const tier3 = scored.slice().sort(sortFn);
+  return {
+    slots:    tier3.slice(0, 10).map(s => s.t),
+    allSlots: tier3.map(s => s.t),
+    tier: 3,
+    label: '⚠ No ideal overlap — least disruptive times available',
+  };
+}
+
+function buildOverlapTable(allValidSlots, baseDate) {
+  const today = new Date(baseDate.getTime());
+  today.setHours(0, 0, 0, 0);
+
+  // First column is always the user's local tz, regardless of activeZones.
+  const localZone  = detectLocalZone();
+  const localTz    = localZone?.tz ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const localLabel = localZone?.label ?? localTz;
+
+  // Per-zone formatter cache — one object per zone, reused across all 48 rows.
+  // Also build one for localTz if it isn't already in activeZones.
+  const cellFmts = {};
+  activeZones.forEach(zone => {
+    cellFmts[zone.tz] = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone.tz, hour: 'numeric', minute: '2-digit', hour12: settings.hour12,
+    });
+  });
+  const localFmt = cellFmts[localTz] ?? new Intl.DateTimeFormat('en-US', {
+    timeZone: localTz, hour: 'numeric', minute: '2-digit', hour12: settings.hour12,
+  });
+
+  // Remaining columns: every active zone except the local tz (already the first column).
+  const otherZones = activeZones.filter(z => z.tz !== localTz);
+
+  // Which 30-min row timestamps fall inside at least one valid slot window?
+  const overlapTs = new Set();
+  allValidSlots.forEach(start => {
+    const end = start.getTime() + settings.meetingDuration * 60000;
+    for (let t = start.getTime(); t < end; t += 30 * 60000) overlapTs.add(t);
+  });
+
+  const table = document.createElement('table');
+  table.className = 'overlap-table';
+
+  // Header row
+  function makeColHeader(label, isLocal) {
+    const th = document.createElement('th');
+    th.textContent = label;
+    if (isLocal) {
+      const badge = document.createElement('span');
+      badge.className   = 'overlap-th-local';
+      badge.textContent = 'my local time';
+      th.appendChild(badge);
+    }
+    return th;
+  }
+
+  const thead = document.createElement('thead');
+  const hRow  = document.createElement('tr');
+  hRow.appendChild(makeColHeader(localLabel, true));
+  otherZones.forEach(zone => hRow.appendChild(makeColHeader(zone.label, false)));
+  thead.appendChild(hRow);
+  table.appendChild(thead);
+
+  // Body — 48 rows
+  const tbody = document.createElement('tbody');
+  for (let i = 0; i < 48; i++) {
+    const t         = new Date(today.getTime() + i * 30 * 60000);
+    const isOverlap = overlapTs.has(t.getTime());
+    const tr        = document.createElement('tr');
+    if (isOverlap) tr.classList.add('is-overlap');
+
+    // First column: local tz — coloured by work status like every other column
+    const tdTime  = document.createElement('td');
+    tdTime.textContent = localFmt.format(t);
+    const wsLocal = getWorkStatus(localTz, t);
+    tdTime.dataset.status = wsLocal?.type ?? 'night';
+    if (isOverlap && wsLocal?.type === 'ok') tdTime.dataset.overlap = 'true';
+    tr.appendChild(tdTime);
+
+    // Remaining zone columns
+    otherZones.forEach(zone => {
+      const td = document.createElement('td');
+      td.textContent = cellFmts[zone.tz].format(t);
+      const ws = getWorkStatus(zone.tz, t);
+      td.dataset.status = ws?.type ?? 'night';
+      if (isOverlap && ws?.type === 'ok') td.dataset.overlap = 'true';
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  return table;
+}
+
+function openOverlapModal() {
+  // Use customDate when in custom/meeting mode so DST is resolved for the selected date.
+  const baseDate   = getDisplayDate() ?? new Date();
+  const result     = findBestOverlapSlots(baseDate);
+  const { slots: topSlots, allSlots, tier, label } = result;
+  const pillsEl    = document.getElementById('overlapPills');
+  const tableWrap  = document.getElementById('overlapTableWrap');
+  const subtitleEl = document.getElementById('overlapSubtitle');
+  const dateLineEl = document.getElementById('overlapDateLine');
+
+  subtitleEl.textContent =
+    `Showing overlapping business hours for a ${formatDuration(settings.meetingDuration)} meeting`;
+
+  // Date line — always visible so the user knows which day is being analysed.
+  const dateLabelFmt = new Intl.DateTimeFormat('en-US', {
+    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+  });
+  dateLineEl.textContent = `Overlap calculated for: ${dateLabelFmt.format(baseDate)}`;
+
+  // ── Tier label — remove any from a previous open, then insert fresh ────
+  document.getElementById('overlapTierLabel')?.remove();
+  const tierLabelEl = document.createElement('p');
+  tierLabelEl.id        = 'overlapTierLabel';
+  tierLabelEl.className = `overlap-tier-label overlap-tier-${tier}`;
+  tierLabelEl.textContent = label;
+  pillsEl.parentElement.insertBefore(tierLabelEl, pillsEl);
+
+  // ── Per-zone formatter cache for pills (one per zone, reused per pill) ─
+  const zonePillFmts = {};
+  activeZones.forEach(zone => {
+    zonePillFmts[zone.tz] = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone.tz, hour: 'numeric', minute: '2-digit', hour12: settings.hour12,
+    });
+  });
+  const firstTz = activeZones[0]?.tz ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // ── Suggested times ────────────────────────────────────────────────────
+  pillsEl.innerHTML = '';
+  topSlots.forEach(slot => {
+    const btn = document.createElement('button');
+    btn.className = 'overlap-pill';
+
+    const mainSpan = document.createElement('span');
+    mainSpan.className   = 'overlap-pill-main';
+    mainSpan.textContent = (zonePillFmts[firstTz] ?? Object.values(zonePillFmts)[0]).format(slot);
+
+    const subText = activeZones.map(zone =>
+      `${zone.label}: ${zonePillFmts[zone.tz].format(slot)}`
+    ).join('  |  ');
+    const subSpan = document.createElement('span');
+    subSpan.className   = 'overlap-pill-sub';
+    subSpan.textContent = subText;
+    btn.title = subText;
+
+    btn.appendChild(mainSpan);
+    btn.appendChild(subSpan);
+
+    btn.addEventListener('click', () => {
+      closeOverlapModal();
+      // Populate the time selects BEFORE setMode so setMode uses these values directly.
+      const offset = slot.getTimezoneOffset() * 60000;
+      document.getElementById('customDatePart').value =
+        new Date(slot.getTime() - offset).toISOString().slice(0, 10);
+      const h24 = slot.getHours();
+      const min = slot.getMinutes();
+      if (settings.hour12) {
+        document.getElementById('customHourPart').value = String(h24 % 12 || 12);
+        document.getElementById('customAmPmPart').value = h24 >= 12 ? 'PM' : 'AM';
+      } else {
+        document.getElementById('customHourPart').value = String(h24);
+      }
+      document.getElementById('customMinutePart').value = String(min);
+      setMode('meeting');
+    });
+    pillsEl.appendChild(btn);
+  });
+
+  // ── 24-hour grid ────────────────────────────────────────────────────────
+  tableWrap.innerHTML = '';
+  tableWrap.appendChild(buildOverlapTable(allSlots, baseDate));
+
+  const modal = document.getElementById('overlapModal');
+  modal.classList.add('open');
+  modal.removeAttribute('aria-hidden');
+  document.body.classList.add('overlap-modal-open');
+  setTimeout(() => document.getElementById('overlapClose').focus(), 50);
+}
+
+function closeOverlapModal() {
+  const modal = document.getElementById('overlapModal');
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('overlap-modal-open');
+  const trigger = document.getElementById('findOverlapBtn');
+  if (trigger && trigger.style.display !== 'none') trigger.focus();
+}
+
+/* ── ICS Calendar Invite ─────────────────────────────────────────────────── */
+
+function icsEscape(text) {
+  // RFC 5545 TEXT escaping: backslash, semicolon, comma, newline
+  return String(text)
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r\n|\r|\n/g, '\\n');
+}
+
+function icsDateTime(date) {
+  // UTC timestamp in iCalendar format: 20260301T123000Z
+  const p = n => String(n).padStart(2, '0');
+  return `${date.getUTCFullYear()}${p(date.getUTCMonth() + 1)}${p(date.getUTCDate())}` +
+         `T${p(date.getUTCHours())}${p(date.getUTCMinutes())}${p(date.getUTCSeconds())}Z`;
+}
+
+function icsFoldLine(line) {
+  // RFC 5545: no line > 75 octets (excl. CRLF); continuation lines start with a space.
+  // Uses TextEncoder for accurate UTF-8 byte counting when available.
+  const enc = (typeof TextEncoder !== 'undefined') ? new TextEncoder() : null;
+  const byteLen = s => enc ? enc.encode(s).length : s.length;
+
+  if (byteLen(line) <= 75) return line + '\r\n';
+
+  let out = '';
+  let current = '';
+  let currentBytes = 0;
+  let isFirst = true;
+
+  for (const ch of line) {                       // iterates Unicode code points
+    const chBytes = byteLen(ch);
+    const limit   = isFirst ? 75 : 74;           // continuation line: 74 + 1 space = 75
+    if (currentBytes + chBytes > limit) {
+      out += (isFirst ? '' : ' ') + current + '\r\n';
+      isFirst = false;
+      current = ch;
+      currentBytes = chBytes;
+    } else {
+      current += ch;
+      currentBytes += chBytes;
+    }
+  }
+  out += (isFirst ? '' : ' ') + current + '\r\n';
+  return out;
+}
+
+function buildIcsDescription(startDate) {
+  // Builds the pre-filled description showing all active zones' times.
+  if (!startDate || !activeZones.length) return '';
+  const endDate = new Date(startDate.getTime() + settings.meetingDuration * 60000);
+
+  // Date shown in browser's local timezone (matches what the user set in the picker)
+  const dateFmt = new Intl.DateTimeFormat('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+  }).format(startDate);
+
+  const lines = [
+    'Hi,',
+    '',
+    'Please find the meeting timing details below.',
+    '',
+    `Date: ${dateFmt}`,
+    `Duration: ${formatDuration(settings.meetingDuration)}`,
+    '',
+    'Meeting times across timezones:',
+    '',
+  ];
+
+  activeZones.forEach(zone => {
+    const abbr = getTzAbbr(zone.tz, startDate);
+    const fmtOpts = { timeZone: zone.tz, hour: 'numeric', minute: '2-digit', hour12: true };
+    const startTime = new Intl.DateTimeFormat('en-US', fmtOpts).format(startDate);
+    const endTime   = new Intl.DateTimeFormat('en-US', fmtOpts).format(endDate);
+    lines.push(`${zone.label} (${abbr}): ${startTime} \u2013 ${endTime}`);
+  });
+
+  return lines.join('\n');
+}
+
+function buildIcsFile(title, description, startDate) {
+  const endDate = new Date(startDate.getTime() + settings.meetingDuration * 60000);
+  const now     = new Date();
+  const uid     = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}@timezoneconverter`;
+
+  const props = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//TimezoneConverter//EN',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${icsDateTime(now)}`,
+    `DTSTART:${icsDateTime(startDate)}`,
+    `DTEND:${icsDateTime(endDate)}`,
+    `SUMMARY:${icsEscape(title)}`,
+    `DESCRIPTION:${icsEscape(description)}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ];
+  return props.map(icsFoldLine).join('');
+}
+
+function triggerIcsDownload(title, description, startDate) {
+  const content = buildIcsFile(title, description, startDate);
+  const blob    = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+  const url     = URL.createObjectURL(blob);
+
+  // Slugify the title for the filename
+  const slug = title.trim().toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '') || 'meeting-invite';
+
+  const a = document.createElement('a');
+  a.href     = url;
+  a.download = `${slug}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+let icsModalTriggerBtn = null;
+
+function openIcsModal() {
+  const modal       = document.getElementById('icsModal');
+  const titleInput  = document.getElementById('icsTitleInput');
+  const descArea    = document.getElementById('icsDescTextarea');
+  const downloadBtn = document.getElementById('icsDownloadBtn');
+  const contextEl   = document.getElementById('icsModalContext');
+  const startDate   = customDate;
+
+  // Always refresh description to reflect the current app state (not stale data)
+  descArea.value = buildIcsDescription(startDate);
+
+  // Pre-fill title on first open; preserve any edits on subsequent opens
+  if (!titleInput.value.trim() && startDate) {
+    const dateFmt = new Intl.DateTimeFormat('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+    }).format(startDate);
+    titleInput.value = `Meeting \u2014 ${dateFmt}`;
+  }
+
+  // Sync download button with current title state
+  downloadBtn.disabled = !titleInput.value.trim();
+
+  // Context line: show selected time in browser's local timezone
+  if (contextEl && startDate) {
+    const formatted = new Intl.DateTimeFormat('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', hour12: true,
+    }).format(startDate);
+    contextEl.textContent = `Download calendar invite for ${formatted}`;
+  }
+
+  modal.classList.add('open');
+  modal.removeAttribute('aria-hidden');
+  document.body.classList.add('ics-modal-open');
+  icsModalTriggerBtn = document.getElementById('downloadInviteBtn');
+  // Move focus into the modal
+  setTimeout(() => titleInput.focus(), 50);
+}
+
+function closeIcsModal() {
+  const modal = document.getElementById('icsModal');
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('ics-modal-open');
+  // Return focus to the trigger button
+  if (icsModalTriggerBtn) {
+    icsModalTriggerBtn.focus();
+    icsModalTriggerBtn = null;
+  }
+}
+
+/* ── Init ────────────────────────────────────────────────────────────────── */
+(function init() {
+  loadState();
+
+  // Apply persisted theme and colour palette before any rendering — no flash
+  if (settings.theme === 'system') document.documentElement.removeAttribute('data-theme');
+  else                             document.documentElement.setAttribute('data-theme', settings.theme);
+  if (settings.colorPalette === 'default') document.documentElement.removeAttribute('data-color-palette');
+  else                                     document.documentElement.setAttribute('data-color-palette', settings.colorPalette);
+
+  // Apply persisted offset visibility before rendering
+  document.body.classList.toggle('hide-offset', !settings.showOffset);
+
+  buildFormatters();
+  rebuildGrid();
+  refreshDropdown();
+  syncSettingsUI();
+
+  // ── Gear / settings panel wiring ────────────────────────────────────────
+  document.getElementById('gearBtn').addEventListener('click', () =>
+    document.getElementById('settingsPanel').classList.contains('open')
+      ? closeSettings() : openSettings());
+
+  document.getElementById('settingsOverlay').addEventListener('click', closeSettings);
+  document.getElementById('settingsClose').addEventListener('click', closeSettings);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeSettings();
+      closeIcsModal();
+      closeOverlapModal();
+    }
+  });
+
+  // ── Format toggle ────────────────────────────────────────────────────────
+  document.querySelectorAll('[data-fmt]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      settings.hour12 = (btn.dataset.fmt === '12');
+      buildFormatters();          // rebuild all formatters with new hour12 setting
+      rebuildHourOptions();       // switch hour select between 1-12 and 00-23
+      saveSettings();
+      syncSettingsUI();
+      const now = getDisplayDate();
+      if (now) activeZones.forEach(zone => updateCard(zone, now));
+    }));
+
+  // ── Theme toggle ─────────────────────────────────────────────────────────
+  document.querySelectorAll('[data-theme-btn]').forEach(btn =>
+    btn.addEventListener('click', () => applyTheme(btn.dataset.themeBtn)));
+
+  // ── Color palette picker ──────────────────────────────────────────────────
+  document.querySelectorAll('[data-palette]').forEach(btn =>
+    btn.addEventListener('click', () => applyColorPalette(btn.dataset.palette)));
+
+  // ── Default mode setting ──────────────────────────────────────────────────
+  document.querySelectorAll('[data-default-mode]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      settings.defaultMode = btn.dataset.defaultMode;
+      syncSettingsUI();
+      saveSettings();
+    }));
+
+  // ── UTC offset toggle ─────────────────────────────────────────────────────
+  document.querySelectorAll('[data-offset]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      settings.showOffset = (btn.dataset.offset === 'true');
+      document.body.classList.toggle('hide-offset', !settings.showOffset);
+      syncSettingsUI();
+      saveSettings();
+    }));
+
+  // ── Mode toggle ──────────────────────────────────────────────────────────
+  document.querySelectorAll('.mode-btn').forEach(btn =>
+    btn.addEventListener('click', () => setMode(btn.dataset.mode)));
+
+  // ── Custom time group: populate hours, wire change events ─────────────────
+  rebuildHourOptions();   // populates hour select (24h or 12h+AM/PM) from settings.hour12
+
+  function onCustomTimeChange() {
+    const d = getCustomDateTime();
+    if (d && !isNaN(d)) { customDate = d; activeZones.forEach(zone => updateCard(zone, customDate)); }
+  }
+  ['customDatePart', 'customHourPart', 'customMinutePart', 'customAmPmPart'].forEach(id =>
+    document.getElementById(id).addEventListener('change', onCustomTimeChange));
+
+  // ── Meeting duration selector ──────────────────────────────────────────
+  const durSel = document.getElementById('meetingDurationSelect');
+  durSel.value = String(settings.meetingDuration);
+  durSel.addEventListener('change', () => {
+    settings.meetingDuration = parseInt(durSel.value, 10);
+    saveSettings();
+    const d = getDisplayDate();
+    if (d && !isNaN(d)) activeZones.forEach(zone => updateCard(zone, d));
+  });
+
+  // ── Time presets ───────────────────────────────────────────────────────
+  document.getElementById('timePresets').addEventListener('click', e => {
+    const btn = e.target.closest('.preset-btn');
+    if (btn) applyPreset(btn.dataset.preset);
+  });
+
+  // If the date field is cleared, restore today's date
+  document.getElementById('customDatePart').addEventListener('blur', e => {
+    if (!e.target.value && (mode === 'custom' || mode === 'meeting')) {
+      const now = new Date();
+      const offset = now.getTimezoneOffset() * 60000;
+      e.target.value = new Date(now - offset).toISOString().slice(0, 10);
+      onCustomTimeChange();
+    }
+  });
+
+  // ── Add zone (select dropdown) ───────────────────────────────────────────
+  document.getElementById('tzSelect').addEventListener('change', e => {
+    if (e.target.value) { addZone(e.target.value); e.target.value = ''; }
+  });
+
+  // ── Remove zone / copy tile (event delegation on grid) ───────────────────
+  document.getElementById('grid').addEventListener('click', e => {
+    const removeBtn = e.target.closest('.card-remove');
+    if (removeBtn) { removeZone(removeBtn.dataset.tz); return; }
+    const copyBtn = e.target.closest('.card-copy');
+    if (copyBtn) {
+      const zone = activeZones.find(z => z.tz === copyBtn.dataset.tz);
+      if (zone) copyTileTime(zone, copyBtn);
+    }
+  });
+
+  // ── Clear All button ─────────────────────────────────────────────────────
+  document.getElementById('clearAllBtn').addEventListener('click', clearAllZones);
+
+  // ── Copy Schedule button ─────────────────────────────────────────────────
+  document.getElementById('copyScheduleBtn').addEventListener('click', copySchedule);
+
+  // ── Mobile copy bar ───────────────────────────────────────────────────────
+  document.getElementById('mobileCopyBtn').addEventListener('click', () => {
+    copySchedule();
+    // Mirror the "Copied!" state on the mobile button
+    const btn = document.getElementById('mobileCopyBtn');
+    const prev = btn.innerHTML;
+    btn.textContent = '\u2713 Copied!';
+    btn.disabled = true;
+    setTimeout(() => { btn.innerHTML = prev; btn.disabled = false; }, 2000);
+  });
+
+  // ── Show/hide buttons based on active zones ───────────────────────────────
+  updateCopyBtnVisibility();
+  updateFindOverlapBtnVisibility();
+  updateClearAllBtnVisibility();
+  updateMobileCopyBarVisibility();
+
+  // ── Find Meeting Overlap modal ────────────────────────────────────────────
+  document.getElementById('findOverlapBtn').addEventListener('click', openOverlapModal);
+  document.getElementById('overlapClose').addEventListener('click', closeOverlapModal);
+  document.getElementById('overlapModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('overlapModal')) closeOverlapModal();
+  });
+
+  // ── Download Invite / ICS modal ───────────────────────────────────────────
+  document.getElementById('downloadInviteBtn').addEventListener('click', openIcsModal);
+  document.getElementById('icsCloseBtn').addEventListener('click', closeIcsModal);
+
+  // Close on backdrop click
+  document.getElementById('icsModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('icsModal')) closeIcsModal();
+  });
+
+  // Enable/disable the download button based on title field content
+  document.getElementById('icsTitleInput').addEventListener('input', () => {
+    document.getElementById('icsDownloadBtn').disabled =
+      !document.getElementById('icsTitleInput').value.trim();
+  });
+
+  // Trigger the actual .ics download
+  document.getElementById('icsDownloadBtn').addEventListener('click', () => {
+    const title = document.getElementById('icsTitleInput').value.trim();
+    const desc  = document.getElementById('icsDescTextarea').value;
+    if (title && customDate) triggerIcsDownload(title, desc, customDate);
+  });
+
+  // ── Drag-and-drop global listeners ───────────────────────────────────────
+  document.addEventListener('mousemove', handleDragMove);
+  document.addEventListener('mouseup',   handleDragEnd);
+
+  // ── Apply default mode (custom may override live as the starting state) ───
+  setMode(settings.defaultMode);
+
+  // ── Start clock ──────────────────────────────────────────────────────────
+  tick();
+  ticker = setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
