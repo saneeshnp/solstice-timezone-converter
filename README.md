@@ -1,39 +1,54 @@
-# Solstice — Easy Time Zone Converter
+# 🌍 Solstice — Easy Time Zone Converter
 
-> A zero-dependency, single-file time zone converter. No build step. No frameworks. Just open `index.html`.
+> Compare times across the world instantly. No install. No sign-up. No nonsense.
+
+**[▶ Try it live →](https://saneeshnp.github.io/solstice-timezone-converter/)**
+
+---
+
+## What is it?
+
+Solstice is a beautifully minimal, fully static time zone converter that runs entirely in your browser. It's a single HTML file — no build step, no frameworks, no dependencies. Clone it, open it, done.
+
+Whether you're scheduling a call with a colleague in Tokyo, figuring out if your São Paulo contact is awake yet, or planning a meeting across four continents — Solstice gives you the answer at a glance.
 
 ---
 
 ## Features
 
 - **Live clock** — ticks every second across all your selected time zones
-- **Custom time mode** — pick any date & time to see what it is around the world simultaneously
-- **53 cities across 6 regions** — UTC, Americas, Europe, Africa, Asia, and Pacific
-- **Add / remove zones** — curated dropdown prevents duplicates; cards animate in and out smoothly
-- **Copy Schedule** — one-click copy of the current time across all active zones
+- **Plan a time** — pick any date & time to see what it looks like around the world simultaneously
+- **Schedule mode** — set a start time and duration; see the meeting window on every card, with conflict warnings for unsociable hours
+- **Find Meeting Overlap** — automatically surfaces the best time slots where everyone is in business hours
+- **Download Calendar Invite** — generate and download a `.ics` file to share with attendees
+- **59 cities across 6 regions** — UTC, Americas, Europe, Africa, Asia, and Pacific
+- **Day / Night indicators** — ☀️ 🌅 🌙 at a glance for every zone
 - **12 / 24-hour toggle** — switch time format globally from the settings panel
 - **Light / Dark / System theme** — respects your OS preference by default
-- **Persistent settings** — your zones, theme, and time format preferences are saved and restored on every visit
-- **Works on all devices** — fully responsive layout that adapts seamlessly from mobile to desktop
+- **Drag to reorder** — arrange cards in any order you like
+- **Copy Schedule** — one-click copy of all current zone times to your clipboard
+- **Persistent settings** — your zones, theme, and preferences are saved and restored on every visit
+- **Fully responsive** — works seamlessly from mobile to desktop
 
 ---
 
 ## Getting Started
 
-No installation. No dependencies. Zero config.
-
 ```bash
-# Repository link will be added later
+git clone https://github.com/saneeshnp/solstice-timezone-converter.git
+cd solstice-timezone-converter
 open index.html   # or just double-click it
 ```
 
-That's it. Everything — HTML, CSS, and JavaScript — lives in a single file.
+No `npm install`. No config files. Everything — HTML, CSS, and JavaScript — lives in a single file.
+
+Or just **[run it in your browser right now](https://saneeshnp.github.io/solstice-timezone-converter/)**.
 
 ---
 
 ## Zone Catalogue
 
-53 hand-picked cities organised by region:
+59 hand-picked cities organised by region:
 
 | Region   | Sample Cities                                      |
 |----------|----------------------------------------------------|
@@ -48,12 +63,13 @@ That's it. Everything — HTML, CSS, and JavaScript — lives in a single file.
 
 ## How to Use
 
-1. **Add a zone** — select a city from the *+ Add time zone* dropdown in the toolbar.
-2. **Remove a zone** — hover over a card and click the X that appears.
-3. **Switch to Custom mode** — click **Custom** in the toolbar, then pick any date and time.
-4. **Change time format or theme** — click the gear icon (top-right) to open the settings panel.
-5. **Copy schedule** — click **Copy Schedule** to copy all current zone times to your clipboard.
-6. **Clear all** — click **Clear All** to reset to the default 5 zones.
+1. **Add a zone** — select a city from the *+ Add time zone* dropdown in the toolbar
+2. **Remove a zone** — hover over a card and click the ✕ that appears
+3. **Plan a time** — click **Plan a time** in the toolbar, then pick any date and time
+4. **Schedule a meeting** — click **Schedule**, set a start time and duration; conflict cards highlight automatically
+5. **Find the best slot** — click **Find Overlap** to see tiered suggestions ranked by convenience
+6. **Download an invite** — in Schedule mode, click **Download Invite** to export a `.ics` calendar file
+7. **Change format or theme** — click the ⚙️ icon (top-right) to open the settings panel
 
 ---
 
@@ -73,7 +89,7 @@ That's it. Everything — HTML, CSS, and JavaScript — lives in a single file.
 UTC · America/New_York · Europe/London · Asia/Kolkata · Asia/Tokyo
 ```
 
-Stored in `localStorage` and restored on every visit.
+Your local zone is auto-detected and placed first. Stored in `localStorage` and restored on every visit.
 
 ---
 
@@ -86,6 +102,12 @@ Stored in `localStorage` and restored on every visit.
 | Safari  | 15.4+           |
 
 Requires `Intl.DateTimeFormat` with `timeZoneName: 'longOffset'` support. A graceful fallback is in place for older environments.
+
+---
+
+## Contributing
+
+Found a bug? Have a city you'd love to see added? PRs and issues are welcome over at the [GitHub repository](https://github.com/saneeshnp/solstice-timezone-converter).
 
 ---
 
