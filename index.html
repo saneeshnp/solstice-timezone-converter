@@ -612,6 +612,18 @@
       letter-spacing: -0.04em;
       color: var(--text);
     }
+    .time-h, .time-colon, .time-m {
+      font-size: inherit;
+      font-weight: inherit;
+      letter-spacing: inherit;
+    }
+    @keyframes colon-blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0; }
+    }
+    body.live-mode .time-colon {
+      animation: colon-blink 1s step-start infinite;
+    }
     /* Task 2: seconds hidden globally */
     .time-sec {
       font-size: clamp(0.95rem, 2vw, 1.5rem);
@@ -1903,7 +1915,7 @@ const LS_COLOR_PALETTE    = 'wc_color_palette';
 
 /* ── State ──────────────────────────────────────────────────────────────── */
 let activeZones = [];       // Array<{label, tz, region}>
-let settings    = { hour12: false, theme: 'system', colorPalette: 'ocean', defaultMode: 'live', showOffset: true, meetingDuration: 60 };
+let settings    = { hour12: true, theme: 'system', colorPalette: 'ocean', defaultMode: 'live', showOffset: true, meetingDuration: 60 };
 let mode        = 'live';   // 'live' | 'custom' | 'meeting'
 let customDate  = null;     // Date | null
 let fmtTime     = {};       // {[tzId]: Intl.DateTimeFormat}
@@ -1961,7 +1973,8 @@ function loadState() {
       .filter(Boolean);
     if (!activeZones.length)
       activeZones = DEFAULT_TZS.map(tz => ALL_ZONES.find(z => z.tz === tz)).filter(Boolean);
-    settings.hour12        = localStorage.getItem(LS_HOUR12) === 'true';
+    const storedHour12 = localStorage.getItem(LS_HOUR12);
+    settings.hour12    = storedHour12 === null ? true : storedHour12 === 'true';
     settings.theme         = localStorage.getItem(LS_THEME) || 'system';
     settings.colorPalette  = localStorage.getItem(LS_COLOR_PALETTE) || 'ocean';
     settings.defaultMode   = localStorage.getItem(LS_DEFAULT_MODE) || 'live';
@@ -2078,7 +2091,7 @@ function createCard(zone) {
     <div class="card-tz">${zone.tz}</div>
     <div class="card-time-wrap">
       <div class="card-time" aria-live="polite" aria-atomic="true">
-        <span class="time-hm"   id="hm-${id}">--:--</span><span
+        <span class="time-hm"   id="hm-${id}"><span class="time-h">--</span><span class="time-colon">:</span><span class="time-m">--</span></span><span
              class="time-sec"   id="sec-${id}">:--</span><span
              class="time-ampm"  id="ampm-${id}"></span>
       </div>
@@ -2135,7 +2148,8 @@ function updateCard(zone, now) {
   const offEl   = document.getElementById(`offset-${id}`);
   if (!hmEl) return;  // not yet in DOM
 
-  hmEl.textContent  = `${get('hour')}:${get('minute')}`;
+  hmEl.querySelector('.time-h').textContent = get('hour');
+  hmEl.querySelector('.time-m').textContent = get('minute');
   secEl.textContent = `:${get('second')}`;
   // dayPeriod is present only in 12-hour mode
   const dp = parts.find(p => p.type === 'dayPeriod' || p.type === 'dayperiod');
@@ -2500,6 +2514,7 @@ function setMode(newMode) {
   timePresets.classList.remove('visible');
   timeControlsBox.classList.remove('visible');
   document.body.classList.remove('meeting-mode');
+  document.body.classList.toggle('live-mode', newMode === 'live');
   if (downloadInviteBtn) downloadInviteBtn.style.display = 'none';
 
   // Clear conflict flags when leaving schedule mode
