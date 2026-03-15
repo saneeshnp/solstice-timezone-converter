@@ -712,9 +712,26 @@
       margin-top: 3rem;
       font-size: 0.75rem;
       color: var(--text-muted);
-      opacity: 0.45;
       transition: color 0.3s;
     }
+    .footer-link-btn {
+      background: var(--surface-container);
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      color: var(--text-muted);
+      font: inherit;
+      font-size: inherit;
+      cursor: pointer;
+      padding: 0.15rem 0.65rem;
+      text-decoration: none;
+      transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .footer-link-btn:hover {
+      background: var(--surface-container-high);
+      border-color: var(--border-h);
+      color: var(--accent);
+    }
+    .footer-sep { margin: 0 0.25rem; opacity: 0.4; }
 
     /* ─── Responsive ─────────────────────────────────────────────────── */
 
@@ -1551,6 +1568,122 @@
     }
     .ics-download-btn:hover:not(:disabled) { opacity: 0.88; }
     .ics-download-btn:disabled { opacity: 0.38; cursor: default; }
+
+    /* ── About / Help info modals ──────────────────────────────────────────── */
+    body.info-modal-open { overflow: hidden; }
+
+    .info-modal {
+      position: fixed;
+      inset: 0;
+      background: var(--overlay);
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.22s cubic-bezier(0.2, 0, 0, 1), visibility 0.22s;
+    }
+    .info-modal.open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+    .info-modal-inner {
+      background: var(--surface-container-high);
+      border-radius: 28px;
+      width: 100%;
+      max-width: 520px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1);
+      opacity: 0;
+      transform: scale(0.97) translateY(10px);
+      transition:
+        opacity 0.25s cubic-bezier(0.2, 0, 0, 1),
+        transform 0.3s cubic-bezier(0.05, 0.7, 0.1, 1),
+        background-color 0.3s;
+    }
+    .info-modal-scroll {
+      max-height: 85vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      scrollbar-width: thin;
+      scrollbar-color: var(--text-muted) transparent;
+    }
+    .info-modal.open .info-modal-inner {
+      opacity: 1;
+      transform: none;
+    }
+    .info-modal-hd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 1.5rem 0.75rem;
+      flex-shrink: 0;
+    }
+    .info-modal-hd h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .info-close-btn {
+      width: 32px; height: 32px;
+      background: transparent;
+      border: none;
+      border-radius: 50%;
+      color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background-color 0.15s, color 0.15s;
+    }
+    .info-close-btn:hover { background: var(--surface-container); color: var(--text); }
+    .info-modal-body {
+      padding: 0 1.5rem 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+    .info-section { display: flex; flex-direction: column; gap: 0.35rem; }
+    .info-section-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+    .info-modal-body p { color: var(--text-muted); margin: 0; }
+    .info-modal-body a { color: var(--accent); text-decoration: none; }
+    .info-modal-body a:hover { text-decoration: underline; }
+    .info-modal-body ul {
+      margin: 0;
+      padding-left: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      color: var(--text-muted);
+    }
+    .info-modal-body code {
+      font-family: 'SF Mono', ui-monospace, 'Fira Code', monospace;
+      font-size: 0.82em;
+      background: var(--surface-container);
+      padding: 0.1em 0.35em;
+      border-radius: 4px;
+    }
+    .info-modal-scroll::-webkit-scrollbar { width: 5px; }
+    .info-modal-scroll::-webkit-scrollbar-track { background: transparent; }
+    .info-modal-scroll::-webkit-scrollbar-button { display: none; height: 0; }
+    .info-modal-scroll::-webkit-scrollbar-thumb {
+      background: var(--text-muted);
+      border-radius: 9999px;
+    }
+    .info-modal-scroll::-webkit-scrollbar-thumb:hover { background: var(--text); }
   </style>
 </head>
 <body>
@@ -1756,7 +1889,13 @@
 <!-- ── Clock grid ──────────────────────────────────────────────────────── -->
 <main class="grid" id="grid"></main>
 
-<footer>Offsets reflect current DST where applicable.</footer>
+<footer>
+  Offsets reflect current DST where applicable.
+  <span class="footer-sep">·</span>
+  <button class="footer-link-btn" id="aboutBtn">About</button>
+  <span class="footer-sep">·</span>
+  <button class="footer-link-btn" id="helpBtn">Help</button>
+</footer>
 
 <!-- ── Mobile sticky copy bar ─────────────────────────────────────────── -->
 <div class="mobile-copy-bar" id="mobileCopyBar" aria-hidden="true">
@@ -1826,6 +1965,94 @@
         </svg>
         Download .ics
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── About modal ────────────────────────────────────────────────────────── -->
+<div class="info-modal" id="aboutModal" role="dialog" aria-modal="true" aria-label="About Solstice" aria-hidden="true">
+  <div class="info-modal-inner">
+    <div class="info-modal-scroll">
+    <div class="info-modal-hd">
+      <h2>About Solstice</h2>
+      <button class="info-close-btn" id="aboutCloseBtn" aria-label="Close">
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+          <line x1="1" y1="1" x2="10" y2="10"/><line x1="10" y1="1" x2="1" y2="10"/>
+        </svg>
+      </button>
+    </div>
+    <div class="info-modal-body">
+      <div class="info-section">
+        <p>Solstice is a free, open-source time zone converter that runs entirely in your browser. Nothing to install, no account required, and no data is sent anywhere.</p>
+      </div>
+      <div class="info-section">
+        <p class="info-section-title">Technology</p>
+        <p>Built with plain HTML, CSS, and JavaScript. Uses the browser's built-in <code>Intl.DateTimeFormat</code> API for accurate time formatting and DST-aware UTC offset calculations. No frameworks, no external dependencies.</p>
+      </div>
+      <div class="info-section">
+        <p class="info-section-title">Coverage</p>
+        <p>59 cities across 6 regions: UTC, Americas, Europe, Africa, Asia, and Pacific.</p>
+      </div>
+      <div class="info-section">
+        <p class="info-section-title">Source</p>
+        <p>Open source on <a href="https://github.com/saneeshnp/solstice-timezone-converter" target="_blank" rel="noopener noreferrer">GitHub</a>. Licensed under MIT.</p>
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Help modal ─────────────────────────────────────────────────────────── -->
+<div class="info-modal" id="helpModal" role="dialog" aria-modal="true" aria-label="Help" aria-hidden="true">
+  <div class="info-modal-inner">
+    <div class="info-modal-scroll">
+    <div class="info-modal-hd">
+      <h2>How to use Solstice</h2>
+      <button class="info-close-btn" id="helpCloseBtn" aria-label="Close">
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+          <line x1="1" y1="1" x2="10" y2="10"/><line x1="10" y1="1" x2="1" y2="10"/>
+        </svg>
+      </button>
+    </div>
+    <div class="info-modal-body">
+      <div class="info-section">
+        <p class="info-section-title">Getting started</p>
+        <ul>
+          <li>Select a city from the <strong>+ Add time zone</strong> dropdown to add a card.</li>
+          <li>Hover a card and click the <strong>✕</strong> button to remove it.</li>
+          <li>Drag cards left or right to reorder them.</li>
+        </ul>
+      </div>
+      <div class="info-section">
+        <p class="info-section-title">Modes</p>
+        <ul>
+          <li><strong>Now</strong> — live clock, updated every second across all zones.</li>
+          <li><strong>Plan a time</strong> — pick any date and time to compare across zones at once.</li>
+          <li><strong>Schedule</strong> — set a start time and duration. Cards show the full meeting window with amber highlights for unsociable hours.</li>
+        </ul>
+      </div>
+      <div class="info-section">
+        <p class="info-section-title">Features</p>
+        <ul>
+          <li><strong>Find Overlap</strong> — surfaces the best meeting times ranked by how convenient they are for everyone.</li>
+          <li><strong>Copy Schedule</strong> — copies all current zone times to your clipboard as plain text.</li>
+          <li><strong>Download Invite</strong> — generates a <code>.ics</code> calendar file ready to share. Available in Schedule mode.</li>
+        </ul>
+      </div>
+      <div class="info-section">
+        <p class="info-section-title">Settings</p>
+        <ul>
+          <li>Click the <strong>gear icon</strong> at the top right to open the settings panel.</li>
+          <li>Switch between 12-hour and 24-hour format, choose a theme, pick a color palette, set a default mode, and show or hide UTC offsets on each card.</li>
+        </ul>
+      </div>
+      <div class="info-section">
+        <p class="info-section-title">Keyboard</p>
+        <ul>
+          <li>Press <strong>Escape</strong> to close any open panel or modal.</li>
+        </ul>
+      </div>
+    </div>
     </div>
   </div>
 </div>
@@ -3300,6 +3527,26 @@ function closeIcsModal() {
   }
 }
 
+/* ── About / Help info modals ────────────────────────────────────────────── */
+function openInfoModal(id) {
+  const modal = document.getElementById(id);
+  if (!modal) return;
+  modal.classList.add('open');
+  modal.removeAttribute('aria-hidden');
+  document.body.classList.add('info-modal-open');
+}
+
+function closeInfoModal(id) {
+  const modal = document.getElementById(id);
+  if (!modal) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+  // Only remove the body lock if no other info modal is open
+  if (!document.querySelector('.info-modal.open')) {
+    document.body.classList.remove('info-modal-open');
+  }
+}
+
 /* ── Init ────────────────────────────────────────────────────────────────── */
 (function init() {
   loadState();
@@ -3330,6 +3577,8 @@ function closeIcsModal() {
       closeSettings();
       closeIcsModal();
       closeOverlapModal();
+      closeInfoModal('aboutModal');
+      closeInfoModal('helpModal');
     }
   });
 
@@ -3476,6 +3725,18 @@ function closeIcsModal() {
     const title = document.getElementById('icsTitleInput').value.trim();
     const desc  = document.getElementById('icsDescTextarea').value;
     if (title && customDate) triggerIcsDownload(title, desc, customDate);
+  });
+
+  // ── About / Help modals ───────────────────────────────────────────────────
+  document.getElementById('aboutBtn').addEventListener('click', () => openInfoModal('aboutModal'));
+  document.getElementById('helpBtn').addEventListener('click',  () => openInfoModal('helpModal'));
+  document.getElementById('aboutCloseBtn').addEventListener('click', () => closeInfoModal('aboutModal'));
+  document.getElementById('helpCloseBtn').addEventListener('click',  () => closeInfoModal('helpModal'));
+  document.getElementById('aboutModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('aboutModal')) closeInfoModal('aboutModal');
+  });
+  document.getElementById('helpModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('helpModal')) closeInfoModal('helpModal');
   });
 
   // ── Drag-and-drop global listeners ───────────────────────────────────────

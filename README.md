@@ -2,7 +2,9 @@
 
 > Compare times across the world instantly. No install. No sign-up. No nonsense.
 
-**[▶ Try it live →](https://saneeshnp.github.io/solstice-timezone-converter/)**
+**[▶ Live Demo →](https://saneeshnp.github.io/solstice-timezone-converter/)**
+
+![Solstice screenshot](docs/screenshots/screenshot.png)
 
 ---
 
