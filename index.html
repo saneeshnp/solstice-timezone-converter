@@ -754,9 +754,12 @@
       .meeting-duration-group { width: 100%; }
       .toolbar-row-actions { flex-wrap: wrap; }
       .time-presets   { width: 100%; }
-      .toolbar-row-btns { margin-left: 0; width: 100%; }
-      .toolbar-row-btns .copy-btn { flex: 1; justify-content: center; }
+      .toolbar-row-btns { margin-left: 0; width: 100%; flex-wrap: wrap; }
+      .toolbar-row-btns .copy-btn { flex: 1; min-width: 0; justify-content: center; padding-left: 0.4rem; padding-right: 0.4rem; }
       .tz-select      { width: 100%; min-width: 0; flex: 1; }
+      .overlap-pills  { flex-direction: column; }
+      .overlap-pill   { border-radius: 12px; width: 100%; align-items: flex-start; }
+      .overlap-pill-sub { max-width: 100%; }
     }
 
     /* Touch devices: no hover available, so always show card action buttons */
@@ -1169,6 +1172,8 @@
       color: var(--text);
       cursor: pointer;
       transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+      min-width: 0;
+      max-width: 100%;
     }
     .overlap-pill:hover { background: var(--accent); border-color: var(--accent); color: var(--primary-fg); }
     .overlap-pill-main { font-size: 0.8rem; font-weight: 500; }
