@@ -1,6 +1,6 @@
 # 🌍 Solstice — Easy Time Zone Converter
 
-> Compare times across the world instantly. No install. No sign-up. No nonsense.
+> Compare times across timezones and create meeting invites on your browser instantly, no server or setup needed. 
 
 **[▶ Live Demo →](https://saneeshnp.github.io/solstice-timezone-converter/)**
 
